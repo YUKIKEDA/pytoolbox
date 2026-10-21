@@ -40,6 +40,7 @@ Read the rules that match the work. `alwaysApply` rules apply to every change. A
 | `open-decisions`       | Elementary conventions are decided in the turn, not handed back         |
 | `concept`              | The spec's concept stays in the owner's words                           |
 | `draft`                | Change the owner's draft only with a reason and agreement from a Grill  |
+| `sources`              | Read and cite the official source before recommending a library's use   |
 
 ## Skills
 
