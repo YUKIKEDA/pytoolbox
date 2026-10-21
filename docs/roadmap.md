@@ -4,7 +4,7 @@ English | [日本語](roadmap.ja.md)
 
 The current row's ID lives only in this file. Acceptance text lives on the Issue.
 
-Start the current row only. `docs/design.ja.md` §9 names the tools. Their order is this table, not the order of that section.
+Start the current row only. `docs/design.ja.md` §8 names the stages and §9 the initial tools. Their order is this table.
 
 ## Current work
 
@@ -12,26 +12,33 @@ M1-1.
 
 | ID | Title | Issue | Status |
 | --- | --- | --- | --- |
-| M1-1 | Add text-count and the error types | #3 | Next |
-| M1-2 | Add regex | | Not started |
-| M1-3 | Add resx-compare | | Not started |
-| M1-4 | Add hardcoding | | Not started |
-| M1-5 | Add ping and port | | Not started |
-| M1-6 | Add folder-size | | Not started |
-| M1-7 | Add csv-gen | | Not started |
-| M1-8 | Add json-gen | | Not started |
-| M1-9 | Add mock-image | | Not started |
-| M1-10 | Add file-copy | | Not started |
-| M1-11 | Add folder-copy | | Not started |
-| M1-12 | Add pdf-split | | Not started |
-| M1-13 | Add file-merge | | Not started |
-| M1-14 | Add image-clip | | Not started |
-| M1-15 | Add udp | | Not started |
-| M1-16 | Add cache-clean | | Not started |
-| M2-1 | Add the GUI for the commands above | | Not started |
+| M1-1 | Add the foundation: error and result types, tool list, GUI shell | #12 | Next |
+| M2-1 | Add text-count | #3 | Not started |
+| M2-2 | Add regex | | Not started |
+| M2-3 | Add resx-compare | | Not started |
+| M2-4 | Add hardcoding | | Not started |
+| M2-5 | Add folder-size | | Not started |
+| M2-6 | Add udp | | Not started |
+| M3-1 | Add the per-target lock | | Not started |
+| M3-2 | Add the run history and its page | | Not started |
+| M4-1 | Add csv-gen | | Not started |
+| M4-2 | Add json-gen | | Not started |
+| M4-3 | Add mock-image | | Not started |
+| M4-4 | Add file-copy | | Not started |
+| M4-5 | Add folder-copy | | Not started |
+| M4-6 | Add pdf-split | | Not started |
+| M4-7 | Add file-merge | | Not started |
+| M4-8 | Add image-clip | | Not started |
+| M4-9 | Add cache-clean | | Not started |
+| M5-1 | Add the subprocess runner | | Not started |
+| M5-2 | Add ping and port | | Not started |
+| M6-1 | Add json-format | | Not started |
+| M6-2 | Add base64 | | Not started |
+| M6-3 | Add uuid | | Not started |
 
-M1 is the library and the CLI for the initial tool list in `docs/design.ja.md` §9. M2 is the GUI for those commands. A row does not start while an earlier row in the same milestone is open.
+Each milestone is one stage of `docs/design.ja.md` §8. Each tool row ships its CLI command and its GUI screen together. A row does not start while an earlier row is open.
 
 ## Intentionally out of scope
 
-None.
+- A CLI command or GUI screen that runs a native script by name or path, and script auto-detection. A script is a tool's implementation ([ADR 0008](adr/0008-cli-safeguards-order.md)).
+- Starting in the background at PC login ([ADR 0008](adr/0008-cli-safeguards-order.md)).

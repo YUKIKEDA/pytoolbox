@@ -103,7 +103,23 @@ A long batch yields `Progress` (`completed`, `total`, `path`) and yields one `Ba
 
 A long call takes `cancel: Callable[[], bool] | None = None` and checks it between items. On cancel, return what finished with `cancelled=True`.
 
-The types are created in the first tool's change. Do not add an empty module ahead of that.
+The types are created in M1-1, the foundation. Do not add an empty module ahead of that.
+
+### Safeguards
+
+A tool that writes or deletes takes `--dry-run`, holds a lock on each write target, and records a history entry. A read-only tool has none of the three.
+
+- The lock is an OS file lock (`msvcrt.locking` on Windows, `fcntl.flock` elsewhere) on `<state>/locks/<sha256 of the resolved target>.lock`, so a crashed process releases it. If the lock is held, raise `OperationError` and write nothing.
+- History is SQLite at `<state>/history.sqlite3`. One row per run that is not `--dry-run`: tool, arguments as JSON, start and end in UTC ISO 8601, success count, failure count, cancelled, and the error message if it raised.
+- `<state>` is `%LOCALAPPDATA%\pytoolbox` on Windows and `$XDG_STATE_HOME/pytoolbox` elsewhere, with `~/.local/state` when the variable is unset. Tests pass a `tmp_path` state directory.
+
+### Streaming
+
+Only batch `Progress` and UDP `LogEvent` stream. The CLI writes one line per value to stdout. The GUI sends them over SSE. Other tools return one result.
+
+### Subprocess
+
+Only the runner starts a process: an external command or a script under `native-scripts/`. It takes an argument list, never a shell string. A script is a tool's implementation. No CLI command or GUI screen runs a script by name or path. On `cancel`, the runner terminates the child and returns with `cancelled=True`. A Python tool runs in process.
 
 ### Files
 
@@ -121,7 +137,7 @@ Call a pure function directly. Files use pytest `tmp_path`. A unit test does not
 
 ### CLI
 
-argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. The command structure is `docs/design.ja.md` §6. The GUI listens on `127.0.0.1:8000` (§7.2).
+argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/design.ja.md` §6). `pytoolbox list` prints each tool with its system and category (§5.1). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000` (§7.2).
 
 `cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/design.ja.md` §9.
 

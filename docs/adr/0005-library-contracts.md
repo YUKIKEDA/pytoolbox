@@ -14,4 +14,4 @@ Unknown types are errors. Failures that stop the call raise `InputError` or `Ope
 
 ## Consequences
 
-The first tool's change adds the exception and result types. It does not add them empty ahead of that change.
+The foundation row, M1-1, adds the exception and result types ([ADR 0008](0008-cli-safeguards-order.md)). It does not add them empty ahead of that change.
