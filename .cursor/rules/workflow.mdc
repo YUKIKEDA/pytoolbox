@@ -36,6 +36,18 @@ CI (`.github/workflows/ci.yml`) runs the three gates on Ubuntu and Windows. Afte
 - Merging. Closing an Issue or PR without an imperative that names it.
 - Ending a turn on a branch that has no Issue and no PR, or leaving files you created that are no longer needed.
 
+When the spec names the remaining work and **Current work** is None, write those rows in the turn that learns of it. That includes the turn the owner asks what is next. Do not answer in chat and leave `docs/roadmap.md` empty. A tool the spec does not name still needs a Grill.
+
+```text
+# BAD
+Owner: 次は何？ roadmap は空だ
+Agent: lists the tools in chat and does not edit docs/roadmap.md
+
+# GOOD
+Owner: 次は何？ roadmap は空だ
+Agent: writes the rows, names the current one, and opens the issue for that row
+```
+
 ## Numbers and language
 
 Create an Issue before its number is written anywhere. Issue and pull request numbers share one sequence. A PR body is written after `gh issue create` has returned the number.

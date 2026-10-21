@@ -1,4 +1,4 @@
-> 状態: 草案。ツール一覧（§9）、GUI、型、エラー、CLI は 2026-10-21 に決めた。実装順だけが `docs/roadmap.md` の行待ちである。契約にする変更は design Issue で行う。
+> 状態: 草案。ツール一覧（§9）、GUI、型、エラー、CLI、実装順は 2026-10-21 に決めた。`cache-clean` は同日の design Issue で一覧へ足した。契約にする変更は design Issue で行う。
 
 # pytoolbox と pytoolbox-gui
 
@@ -6,7 +6,7 @@
 
 日常のファイル操作、テキスト処理、通信確認を一つの Python 基盤にまとめる。コア `pytoolbox` はライブラリと CLI。`pytoolbox-gui` はそのコアをローカルブラウザに出す。
 
-機能の一覧は §9 である。草案の初期案にあった Base64、JWT、JSON 整形、UUID、パスワード、ハッシュ、キャッシュ掃除、Wi-Fi リセット、環境キッティング、実行履歴 DB、ログイン常駐は、この一覧に無い。一覧へ足すには別の決定が要る。
+機能の一覧は §9 である。草案の初期案にあった Base64、JWT、JSON 整形、UUID、パスワード、ハッシュ、Wi-Fi リセット、環境キッティング、実行履歴 DB、ログイン常駐は、この一覧に無い。一覧へ足すには別の決定が要る。
 
 実装は Python を原則とする。既存ツールにシェル専用の処理は無い。`native-scripts/` は、必要だと Issue が言うまで作らない。
 
@@ -45,7 +45,7 @@ pytoolbox/
 - 未知の型は pyright が落とす。`Any` と `type: ignore` は、その行に理由があるときだけ。
 - 中断する失敗は `InputError` か `OperationError`。メッセージは英語。項目ごとの失敗は続け、`BatchResult` に載せる。出力先が作れないときは何も書かず `OperationError`。
 - 長い処理は `Progress` を順に返し、最後に `BatchResult` を返す。コールバックと logging は使わない。中断は `cancel` を項目のあいだで見る。
-- リンクは追わない。書き先は指定ディレクトリの中だけ。テキストは UTF-8。Excel 向け CSV だけ BOM。既存パスは上書きしない（`--overwrite`）。`--dry-run` は書かない。
+- リンクは追わない。書き先は指定ディレクトリの中だけ。テキストは UTF-8。Excel 向け CSV だけ BOM。既存パスは上書きしない（`--overwrite`）。`--dry-run` は書かない。`cache-clean` の既定はこれと同じで、消すのは `--apply` だけである。
 - 単体テストはネットワークを開かない。ファイルは一時ディレクトリ。
 - CLI は argparse。終了コードは 0、入力エラー 1、実行エラー 2。
 
@@ -67,9 +67,11 @@ pytoolbox gui
 
 `gui` は `127.0.0.1:8000` で待つ。コマンド名は次のとおり。
 
-`text-count`、`regex`、`resx-compare`、`hardcoding`、`ping`、`port`、`folder-size`、`csv-gen`、`json-gen`、`mock-image`、`file-copy`、`folder-copy`、`pdf-split`、`file-merge`、`image-clip`、`udp`。
+`text-count`、`regex`、`resx-compare`、`hardcoding`、`ping`、`port`、`folder-size`、`csv-gen`、`json-gen`、`mock-image`、`file-copy`、`folder-copy`、`pdf-split`、`file-merge`、`image-clip`、`udp`、`cache-clean`。
 
 `csv-gen`、`json-gen`、`mock-image` は種を任意で受ける。省略すると結果は実行ごとに変わる。
+
+`cache-clean` は名前を一つ以上、引数で渡す。名前が無い、または未知の名前は `InputError` で、何も走査しない。引数に書いた名前だけを扱う。既定と `--dry-run` は、消す予定のパスとバイト数を出す。`--apply` のときだけ消す。
 
 ## 7. 配布
 
@@ -79,7 +81,7 @@ pytoolbox gui
 
 ## 8. 実装順
 
-実装順は `docs/roadmap.md` の行が決める。今は行が無い。§9 の並びは優先度ではない。
+実装順は `docs/roadmap.md`。現在の行は M1-1。§9 の並びは優先度ではない。
 
 ## 9. ツール一覧
 
@@ -110,6 +112,7 @@ pytoolbox gui
 | PDF 分割 | PDF を1ページずつ `page_N.pdf` として書く | PDFDivider と PyDevToys | 無し |
 | ファイル結合 | 選んだテキストを、区切り付きで1つの `.txt` に書く。読めないファイルはその旨を書く | FileMergerGUI と PyDevToys | 名前は `merged_YYYYMMDD_HHMMSS.txt` |
 | 画像クリップ | フォルダ内の jpg, jpeg, png, bmp, gif を、指定した矩形で切り、`cropped_` を付けて書く。元フォルダへ書く選択がある。JPEG 品質 95 | PyImageCripper と PyDevToys | 矩形は画像のピクセル座標。画像の外は丸める |
+| キャッシュ掃除 | 引数で指定した名前のキャッシュだけを消し、ストレージを空ける | 2026-10-21 に一覧へ足した。出典の6ツールには無い | 名前は `temp`、`pip`、`uv`、`npm`、`nuget`、`cargo`。`temp` は `%LOCALAPPDATA%\Temp` で、最終更新から 24 時間未満は残す。使用中で消せないファイルは失敗として数え、残りは続ける。`pip` は `%LOCALAPPDATA%\pip\Cache`、`uv` は `%LOCALAPPDATA%\uv\cache`、`npm` は `%LOCALAPPDATA%\npm-cache`、`nuget` は `%USERPROFILE%\.nuget\packages`、`cargo` は `%USERPROFILE%\.cargo\registry`。これらは中身を全部消す。ディレクトリ自体は残す。リンクは追わない。ルートが無いときは成功。GUI も同じ契約 |
 
 ### 9.3 セッション
 
