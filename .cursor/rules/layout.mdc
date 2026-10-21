@@ -1,0 +1,20 @@
+---
+description: uv workspace; do not create empty files ahead of the Issue that needs them
+alwaysApply: true
+---
+
+# Layout
+
+uv workspace. The root is not a published package. Do not create empty files ahead of the Issue that needs them. This includes `justfile` recipes, scripts, skills, and packages.
+
+```text
+packages/pytoolbox/     core library
+packages/<name>/tests/  tests for that package
+docs/                   design.ja.md, roadmap.md, conventions.md, adr/
+native-scripts/         only when an Issue adds a shell script
+```
+
+- `docs/design.ja.md` is the draft spec. `docs/roadmap.md` lists work: ID, title, Issue, status. `docs/conventions.md` holds the directory tree and the toolchain.
+- `packages/pytoolbox-gui` is added by the Issue that builds the GUI. Do not add it empty.
+- Do not add a dependency the design does not name. A new dependency is a design change first.
+- A rule states a working constraint. It does not copy the spec's tool list or function list.

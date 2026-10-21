@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Design spec
+    url: https://github.com/YUKIKEDA/pytoolbox/blob/main/docs/design.ja.md
+    about: Personal project. Outside issues are not accepted. The draft spec is docs/design.ja.md.

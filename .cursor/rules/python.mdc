@@ -1,0 +1,27 @@
+---
+description: Python style, types, tests, and process execution
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python
+
+The style is `docs/conventions.md`. `ruff format` owns layout. `ruff check` owns the enabled codes in `pyproject.toml`. Do not hand-wrap a line, and do not silence a code without that code and a reason on the same line.
+
+- Python 3.12. Annotate parameters and returns. `X | None`, `list[str]`.
+- Google docstrings in English on public modules, classes, and functions. Tests have none.
+- pyright `standard` must pass.
+- `pathlib.Path` for filesystem paths. No `shell=True`. No bare `except`.
+- Library functions return values. They do not `print`.
+- Tests are `test_<behavior>` under the package's `tests/`, and import the package by name.
+
+```python
+# BAD
+def count(root):
+    print(len(os.listdir(root)))
+
+# GOOD
+def count_files(root: Path) -> int:
+    """Return how many files are directly inside root."""
+    return sum(1 for path in root.iterdir() if path.is_file())
+```

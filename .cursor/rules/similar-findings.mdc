@@ -1,0 +1,12 @@
+---
+description: Fix the same kind of problem wherever it also occurs
+alwaysApply: true
+---
+
+# Similar findings
+
+When a review or a test finds a problem, check the same file, the callees under the same contract, and the paired code for the same kind of problem. Fix them in the same change, or put a roadmap row on the ones left.
+
+"The same kind" is found by searching the whole workspace for the form, not by reading only the files the change already touches.
+
+Examples: one tool validates its path and its sibling does not; one command rejects `shell=True` and another builds a shell string; the CLI and the GUI disagree on a flag the spec gives both.

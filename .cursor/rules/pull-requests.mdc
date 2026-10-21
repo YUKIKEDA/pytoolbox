@@ -1,0 +1,16 @@
+---
+description: PR title and body follow the template
+alwaysApply: true
+---
+
+# Pull requests
+
+- The title is a Conventional Commits line. Its type is the kind of the row the PR finishes.
+- The body uses the six headings of `.github/pull_request_template.md`, in order, in English: `## Summary`, `## Related`, `## Test plan`, `## Verification`, `## Risk / Rollback`, `## Checklist`. List text under them may be Japanese. An empty section is `N/A`. Do not invent headings.
+- Start a body from the template file, not from an earlier PR's body.
+- An acceptance line the PR cannot fill means the PR does not finish that Issue: write `Part of #N`, not `Closes #N`.
+- `## Verification` has, before anything else, every line of the Issue's definition of done with what met it, or "not met" and where it went. It is written before `gh pr create`, from the Issue as it reads then.
+- A section number of the design, or a line of a file, cited in a body is read from the file before it is written.
+- A PR stacked on another is merged into `main` only. When the PR under it merges, its base is `main` before anyone merges it. After a merge, `git log origin/main` has the commit, or the merge did not happen.
+- Edit a body from a UTF-8 file with `--body-file`, check it is not empty, and read it back.
+- Of two PRs open side by side, only the one that merges later edits the Current work line of `docs/roadmap.md`.

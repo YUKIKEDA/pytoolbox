@@ -1,0 +1,20 @@
+---
+description: Conventional Commits for commit subjects and PR titles
+alwaysApply: true
+---
+
+# Conventional Commits
+
+`type(scope): subject`
+
+- `type`: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build`, `ci`.
+- `scope` is optional, English, kebab-case or a short noun: `cli`, `dev`, `gui`, `runner`.
+- `subject` is imperative and short, with no trailing period. It may be Japanese; `type` and `scope` stay English.
+- A breaking change uses `!` or a `BREAKING CHANGE:` footer.
+- A spike commit is `chore` or `test`.
+
+```text
+feat(dev): add JSON formatting
+fix(runner): reject shell=True for system tools
+docs(adr): record the Python 3.12 toolchain
+```

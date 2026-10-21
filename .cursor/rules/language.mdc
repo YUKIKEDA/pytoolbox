@@ -1,0 +1,34 @@
+---
+description: English code and process docs; Japanese spec; bilingual reader pages
+alwaysApply: true
+---
+
+# Language
+
+## English
+
+Write these in English:
+
+- Code: identifiers, docstrings, comments, exception messages
+- Tests: names, assertion messages
+- `.cursor/` rules and skills, `.github/` template headings
+- Commit `type` and `scope`, PR titles' type and scope
+
+Chat with the user may be in any language. Issue bodies, PR bodies, and commit subjects may be Japanese.
+
+## Bilingual documents
+
+English is the source of truth. Change both files of a pair in the same PR. Headings stay English.
+
+| English           | Japanese             |
+| ----------------- | -------------------- |
+| `README.md`       | `README.ja.md`       |
+| `docs/roadmap.md` | `docs/roadmap.ja.md` |
+
+Do not add `CONTRIBUTING.md`. The owner's process is `AGENTS.md` and `.cursor/rules/`.
+
+Keep the language switch line at the top of both files of a pair. A Japanese-only change must not change the meaning.
+
+## Spec
+
+`docs/design.ja.md` is the spec, in Japanese. Do not add `docs/design.md` until a roadmap row says to translate it. ADRs are English.

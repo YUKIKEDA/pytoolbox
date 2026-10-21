@@ -1,0 +1,109 @@
+[project]
+name = "pytoolbox-workspace"
+version = "0.0.0"
+description = "Development workspace for pytoolbox. Not published."
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/pytoolbox"]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.390",
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+]
+
+[tool.ruff]
+required-version = ">=0.17"
+line-length = 100
+target-version = "py312"
+src = ["packages/pytoolbox/src", "packages/pytoolbox/tests"]
+extend-exclude = [".agents"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ANN",
+    "ASYNC",
+    "B",
+    "BLE",
+    "C4",
+    "D",
+    "DTZ",
+    "E",
+    "ERA",
+    "F",
+    "FURB",
+    "I",
+    "ISC",
+    "LOG",
+    "N",
+    "PERF",
+    "PIE",
+    "PLC",
+    "PLE",
+    "PLW",
+    "PT",
+    "PTH",
+    "RET",
+    "RUF",
+    "S",
+    "SIM",
+    "T20",
+    "TD",
+    "TID",
+    "TRY",
+    "UP",
+    "W",
+]
+ignore = [
+    "D105", # A magic method takes its meaning from its name.
+    "D107", # The class docstring covers __init__.
+]
+
+[tool.ruff.lint.per-file-ignores]
+"packages/**/tests/**" = ["D", "S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pytoolbox", "pytoolbox_gui"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["packages/pytoolbox/tests"]
+addopts = ["-q"]
+
+[tool.coverage.run]
+source = ["pytoolbox"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_empty = false
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+reportUnknownParameterType = "error"
+reportUnknownArgumentType = "error"
+reportUnknownLambdaType = "error"
+reportUnknownVariableType = "error"
+reportUnknownMemberType = "error"
+reportUnnecessaryTypeIgnoreComment = "error"
+include = ["packages"]
+venvPath = "."
+venv = ".venv"
