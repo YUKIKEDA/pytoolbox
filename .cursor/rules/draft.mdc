@@ -11,12 +11,20 @@ Change it only when there is a reason from the product's requirements and the ow
 
 Do not call the draft "not a contract" to justify ignoring it.
 
+"The draft says so" is not a reason in a Grill. A recommendation rests on the product's requirements, for the draft's choice and for the change alike. When no requirement supports the draft's choice, say so, and recommend from the requirements.
+
 ```text
 # BAD
 Owner agrees on an initial tool list.
 Agent: rewrites the architecture, the CLI, and the phases to fit that list
 
+# BAD
+Agent: recommends `run` and `util` because the draft shows them
+
 # GOOD
 Owner agrees on an initial tool list.
 Agent: adds the list, keeps the draft's text, and asks in a Grill where the list and the draft conflict
+
+# GOOD
+Agent: says the draft gives no reason for two verbs, and recommends from what the user must type and what a tool must guard
 ```
