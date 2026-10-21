@@ -1,0 +1,20 @@
+---
+description: Decide elementary conventions in the turn; do not hand them back as a menu
+alwaysApply: true
+---
+
+# Open decisions
+
+Elementary conventions are decided in the turn they come up. Types, errors, tests, paths, encoding, CLI exit codes, and a behavior difference already named in the spec are in that set. Write the decision into `docs/conventions.md` or `docs/design.ja.md` in that turn. Do not answer with a menu and wait.
+
+Ask only when the choice adds or removes a tool from the inventory.
+
+```text
+# BAD
+Owner: 型とエラーは?
+Agent: lists seven options, recommends, and waits
+
+# GOOD
+Owner: 型とエラーは?
+Agent: writes the contracts into the conventions and the spec in that turn
+```

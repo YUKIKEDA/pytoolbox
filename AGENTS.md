@@ -37,6 +37,7 @@ Read the rules that match the work. `alwaysApply` rules apply to every change. A
 | `powershell-shell`     | Shell syntax on this setup                                             |
 | `language`             | English code; Japanese spec; bilingual README and roadmap              |
 | `python`               | Format, lint, types, and docstrings: `docs/conventions.md`            |
+| `open-decisions`       | Elementary conventions are decided in the turn, not handed back         |
 
 ## Skills
 
