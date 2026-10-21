@@ -6,12 +6,12 @@
 
 ## Context
 
-The owner wrote the concept: PC operations and DevToys-compatible developer utilities in one toolbox. A later edit replaced that paragraph with a shorter summary, and listed the concept's tools as out of the product. The owner rejected both the summary and the status line above it.
+The owner wrote the concept: PC operations and DevToys-compatible developer utilities in one toolbox. The owner agreed to an initial tool list built from six existing tools. An edit replaced the concept with a summary of that list, and wrote the concept's other tools as out of scope. A later edit turned those tools into a table and roadmap rows. The owner agreed to neither.
 
 ## Decision
 
-`docs/design.ja.md` §1 is the owner's concept, in the owner's words. Developer Tools and System Tools named there are in the product. The six existing tools and `cache-clean` are part of that concept, not a replacement for it. Their roadmap rows stay M1 and M2. The other named tools are M3.
+`docs/design.ja.md` §1 is the owner's concept, in the owner's words. §9 is the initial tool list. It does not replace or narrow §1. A tool outside §9 is added through a Grill and an Issue.
 
 ## Consequences
 
-Do not rewrite §1 to describe a subset of the tools. Current work stays M1-1 until that row is done.
+Do not rewrite §1 as a list of tools. Do not mark a tool the concept names as out of scope without the owner's decision.

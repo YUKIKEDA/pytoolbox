@@ -14,32 +14,16 @@
 
 ## 2. 実行パス
 
-ツールは性質に応じて、即時処理（Developer Tools）と、プロセス実行（System Tools）の2つを持つ。コアの関数は CLI と GUI の両方から呼ぶ。
-
-```text
-[ ユーザー操作 ]
-   │
-   ├── CLI
-   └── Web ブラウザ（pytoolbox-gui）
-              │
-              ▼
-       pytoolbox コア
-       ├── Developer Tools    JSON/YAML 整形、Base64、URL、JWT、UUID、パスワード、ハッシュ、タイムスタンプ、Diff
-       │                      Python の関数として実行し、入力に対して結果を返す
-       └── System Tools       キャッシュ掃除、環境構築、ポート調査、ネットワーク修復
-                              サブプロセス、SSE のログ、排他ロック、実行履歴
-```
-
-GUI はローカルの Web アプリである。FastAPI が API を出し、Jinja2 が HTML を出し、HTMX と Tailwind で画面を組む。Developer Tools は待たない。System Tools はログを流す。破壊的な操作は `--dry-run` を持つ。
-
-ファイルを読む・書くツールと、開始と停止のあるツールも、同じコアから呼ぶ。
+ツールは操作の形で3つに分かれる。コアの関数は CLI と GUI の両方から呼ぶ。
 
 ```text
 [ 操作 ]
-   ├── 即時        入力を受け取り、結果を返す
-   ├── バッチ      ファイルを読む・書く、または走査する
+   ├── 即時     入力を受け取り、結果を返す
+   ├── バッチ   ファイルを読む・書く、または走査する。進捗を返してよい
    └── セッション  開始と停止があり、ログを流し続ける
 ```
+
+GUI はローカルの Web アプリである。FastAPI が API を出し、Jinja2 が HTML を出し、HTMX と Tailwind で画面を組む。待たない処理は通常のリクエストで返す。バッチの進捗とセッションのログは、そのツールを作る Issue が配信方法を決める。全ツールに SSE、排他ロック、SQLite 履歴を先に付けない。
 
 ## 3. リポジトリ
 
@@ -69,23 +53,7 @@ pytoolbox/
 
 ## 5. GUI
 
-左にツール、右にそのツールの画面。カテゴリは次のとおり。
-
-```text
-Developer Utilities
-  Encoders / Decoders    Base64、URL、JWT
-  Formatters             JSON、YAML
-  Generators             UUID、ハッシュ、パスワード、タイムスタンプ
-  Text                   Diff、正規表現
-
-System Operations
-  Cleanup                キャッシュ削除、一時ファイル
-  Network                ポート調査、Wi-Fi リセット、疎通確認
-  Setup                  開発環境キッティング、パッケージ更新
-
-Logs & History
-  実行履歴
-```
+左にツール、右にそのツールの画面。カテゴリは §9 の見出しに合わせる。
 
 - 即時の画面は、入力と結果を同じ画面に置く。
 - バッチの画面は、引数、実行、結果または進捗を置く。
@@ -119,7 +87,7 @@ pytoolbox gui
 
 ## 9. ツール一覧
 
-§9.1 から §9.3 は、手元にある6つのツールである。PyDevToys が eel で大半を既にまとめており、FolderSizer だけがそこへ入っていない。設定画面はチェックボックスだけで動作が無いので、一覧に入れない。§9.4 は、コンセプトのうち、この6つに無いものである。
+初期で作るツールの一覧である。出典は手元の6つ。PyDevToys が eel で大半を既にまとめており、FolderSizer だけがそこへ入っていない。設定画面はチェックボックスだけで動作が無いので、一覧に入れない。
 
 出典の違いは次のとおり決めた。
 
@@ -146,30 +114,10 @@ pytoolbox gui
 | PDF 分割 | PDF を1ページずつ `page_N.pdf` として書く | PDFDivider と PyDevToys | 無し |
 | ファイル結合 | 選んだテキストを、区切り付きで1つの `.txt` に書く。読めないファイルはその旨を書く | FileMergerGUI と PyDevToys | 名前は `merged_YYYYMMDD_HHMMSS.txt` |
 | 画像クリップ | フォルダ内の jpg, jpeg, png, bmp, gif を、指定した矩形で切り、`cropped_` を付けて書く。元フォルダへ書く選択がある。JPEG 品質 95 | PyImageCripper と PyDevToys | 矩形は画像のピクセル座標。画像の外は丸める |
-| キャッシュ掃除 | 引数で指定した名前のキャッシュだけを消し、ストレージを空ける | コンセプトの System Tools。手元の6ツールには無い | 名前は `temp`、`pip`、`uv`、`npm`、`nuget`、`cargo`。`temp` は `%LOCALAPPDATA%\Temp` で、最終更新から 24 時間未満は残す。使用中で消せないファイルは失敗として数え、残りは続ける。`pip` は `%LOCALAPPDATA%\pip\Cache`、`uv` は `%LOCALAPPDATA%\uv\cache`、`npm` は `%LOCALAPPDATA%\npm-cache`、`nuget` は `%USERPROFILE%\.nuget\packages`、`cargo` は `%USERPROFILE%\.cargo\registry`。これらは中身を全部消す。ディレクトリ自体は残す。リンクは追わない。ルートが無いときは成功。GUI も同じ契約 |
+| キャッシュ掃除 | 引数で指定した名前のキャッシュだけを消し、ストレージを空ける | 手元の6ツールには無い | 名前は `temp`、`pip`、`uv`、`npm`、`nuget`、`cargo`。`temp` は `%LOCALAPPDATA%\Temp` で、最終更新から 24 時間未満は残す。使用中で消せないファイルは失敗として数え、残りは続ける。`pip` は `%LOCALAPPDATA%\pip\Cache`、`uv` は `%LOCALAPPDATA%\uv\cache`、`npm` は `%LOCALAPPDATA%\npm-cache`、`nuget` は `%USERPROFILE%\.nuget\packages`、`cargo` は `%USERPROFILE%\.cargo\registry`。これらは中身を全部消す。ディレクトリ自体は残す。リンクは追わない。ルートが無いときは成功。GUI も同じ契約 |
 
 ### 9.3 セッション
 
 | ツール | すること | 出典 | 決定 |
 | --- | --- | --- | --- |
 | UDP 受信 | 指定したアドレスで UDP を待ち、届いたデータグラムをログする。開始と停止がある | UDPListener と PyDevToys | 既定は `127.0.0.1:9000`。長さ、16進、UTF-8 で読めた文字列をログする |
-
-### 9.4 コンセプトのうち、手元の6つに無いもの
-
-| ツール | すること | 系統 | 決定 |
-| --- | --- | --- | --- |
-| JSON 整形 | JSON を整形する | Developer Tools | 無し |
-| YAML 整形 | YAML を整形する | Developer Tools | 無し |
-| Base64 | Base64 を変換する | Developer Tools | 無し |
-| URL | URL を変換する | Developer Tools | 無し |
-| JWT | JWT を変換する | Developer Tools | 無し |
-| UUID | UUID を生成する | Developer Tools | 無し |
-| パスワード | パスワードを生成する | Developer Tools | 無し |
-| ハッシュ | ハッシュを計算する | Developer Tools | 無し |
-| タイムスタンプ | タイムスタンプを変換する | Developer Tools | 無し |
-| Diff | テキストの差分を出す | Developer Tools | 無し |
-| Wi-Fi リセット | Wi-Fi をリセットする | System Tools | 無し |
-| 環境キッティング | 開発環境を整える | System Tools | 無し |
-| パッケージ更新 | パッケージを更新する | System Tools | 無し |
-| 実行履歴 | 実行履歴を残し、あとから見られるようにする | System Tools | 無し |
-| ログイン常駐 | ログイン時に常駐する | System Tools | 無し |
