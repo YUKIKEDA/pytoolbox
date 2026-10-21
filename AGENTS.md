@@ -23,7 +23,7 @@ Read the rules that match the work. `alwaysApply` rules apply to every change. A
 | `contributions`        | Personal repo; do not accept or invite outside issues or pull requests |
 | `workflow`             | Grill, Issue, branch, PR, human merge, retrospective; gates            |
 | `consent`              | A question is not a decision; options need a recommendation            |
-| `git`                  | Destructive git needs a named order; commit and push only when asked   |
+| `git`                  | Destructive git needs a named order; an Issue's finished work goes to its PR   |
 | `conventional-commits` | `type(scope): subject`                                                 |
 | `pull-requests`        | Title and six-heading body from the template                           |
 | `github-closing`       | A closing verb before `#N` closes it; `Closes #N` alone on a line      |

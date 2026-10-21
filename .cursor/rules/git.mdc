@@ -1,5 +1,5 @@
 ---
-description: Destructive git operations and commits need an explicit order
+description: Destructive git operations need an explicit order; an Issue's finished work goes to its PR
 alwaysApply: true
 ---
 
@@ -9,8 +9,17 @@ A question is not permission. `reset`, `rebase`, `push --force`, `push --force-w
 
 When asked about such an operation, answer with the current `HEAD` SHA, the target SHA, what would disappear, and the exact command. Then wait.
 
-- Commit only when the message asks for a commit. Push only when it asks for a push. An open PR is not consent.
+- The work of an Issue, on its branch, is committed, pushed, and opened as a PR in the turn it is done and the gates pass (`workflow` step 6). Do not leave it uncommitted to wait for an ask.
+- Any other commit or push happens only when the message asks for it. An open PR is not consent.
 - If history was rewritten, put the SHA from before the rewrite on the first line of the reply.
 - Never skip hooks (`--no-verify`) or signing unless the owner orders it.
 - A push that follows a test is chained so a failed test stops the push. On PowerShell 5, `&&` is not available: run the test, then push only when the exit code is 0.
 - A withdrawn prototype's branch stays until the owner names it.
+
+```text
+# BAD
+Agent: finishes the edits for #11, runs the gates, and asks whether to commit
+
+# GOOD
+Agent: finishes the edits for #11, runs the gates, commits, pushes, and opens the PR
+```

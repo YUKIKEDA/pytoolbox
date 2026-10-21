@@ -21,7 +21,7 @@
 ```text
 [ ユーザー操作 ]
    │
-   ├──▶ ① CLI直接実行 : pytoolbox run / pytoolbox util
+   ├──▶ ① CLI直接実行 : pytoolbox <tool>
    │
    └──▶ ② Web ブラウザ : pytoolbox-gui (DevToys風UI)
               │
@@ -34,10 +34,17 @@
        ┌────────────────────────────────────────────────────────┐
        │ 【パス B】System Tools (管理・運用系)                   │
        │  ・キャッシュ掃除, 環境構築, ポート調査, ネットワーク修復 │
-       │  ・Subprocess実行 (Python / Shell / PowerShell)        │
+       │  ・Subprocess実行 (外部コマンド / Shell / PowerShell)  │
        │  ・SSEリアルタイムログ配信 ＋ 排他ロック ＋ 履歴DB     │
        └────────────────────────────────────────────────────────┘
 ```
+
+2系統は、実行のしかたと GUI の分類である。CLI のコマンドは分けない。
+
+* **書く・消すツール**: `--dry-run`、書き先ごとの排他ロック、実行履歴を持つ。読むだけのツールは持たない。
+* **ログ配信**: 一括処理の進捗と UDP 受信のログだけを流す。GUI は SSE、CLI は標準出力。
+* **Subprocess**: 外部コマンドとシェルスクリプトだけ。Python で書くツールは同じプロセスで動かし、`cancel` で止める。
+* **シェルスクリプト**: ツールの中身である。ツールが Runner を通して呼ぶ。CLI と GUI に、スクリプトを名前やパスで実行する入口は作らない。
 
 ---
 
@@ -102,6 +109,8 @@ pytoolbox/
 * **安全基準**:
   * 破壊的操作を含む場合は `--dry-run` オプションを必須とする。
   * コマンドインジェクション防止のため `shell=True` は使用禁止。
+  * 書く・消すツールは、書き先ごとに排他ロックを取る。同じ書き先への2つ目の実行は `OperationError` で止める。
+  * 書く・消すツールの実行は履歴に残す。`--dry-run` の実行は残さない。
 * **UI表現**: 引数入力フォーム（オプション指定） ＋ 実行ボタン ＋ リアルタイム黒画面コンソール（SSE）。
 
 ---
@@ -115,17 +124,22 @@ DevToysライクなレイアウトを採用し、左サイドバーで全ツー�
 ▼ Developer Utilities
   ├─ Encoders / Decoders (Base64, URL, JWT)
   ├─ Formatters (JSON, YAML)
-  ├─ Generators (UUID, Hash, Password)
-  └─ Text (Diff, 正規表現テスター)
+  ├─ Generators (UUID, Hash, Password, CSV 生成, JSON 生成, モック画像)
+  ├─ Text (Diff, 正規表現テスター, 文字数)
+  └─ Code (リソース比較, ハードコーディング検出)
 
 ▼ System Operations
+  ├─ Files (ファイルコピー, フォルダコピー, PDF 分割, ファイル結合, 画像クリップ)
+  ├─ Storage (フォルダサイズ)
   ├─ Cleanup (キャッシュ削除, 一時ファイル掃除)
-  ├─ Network (ポート調査, Wi-Fiリセット, 疎通確認)
+  ├─ Network (ポート調査, Wi-Fiリセット, 疎通確認, UDP 受信)
   └─ Setup (開発環境キッティング, パッケージ更新)
 
 ▼ Logs & History
   └─ 過去の実行履歴 (SQLite)
 ```
+
+分け方は、利用者が扱う対象である。テキストとコードは Developer Utilities、PC のファイル、ストレージ、ネットワークは System Operations に置く。安全策は分類ではなく、ツールごとに付く。`pytoolbox list` も同じ系統と分類を示す。
 
 ### 5.2 処理フローの違い（FastAPI実装）
 * **Dev系（即時API）**:
@@ -139,23 +153,20 @@ DevToysライクなレイアウトを採用し、左サイドバーで全ツー�
 
 ## 6. CLI インターフェース設計 (`pytoolbox`)
 
-CLIからもすべての機能に直感的にアクセスできます。
+CLIからもすべての機能に直感的にアクセスできます。コマンドは `pytoolbox <tool>` の一段で、系統は `pytoolbox list` が示す。
 
 ```bash
 # 1. 一覧表示
 pytoolbox list
 
 # 2. System系ツールの実行 (ログを標準出力に流す)
-pytoolbox run clean-disk --dry-run
+pytoolbox cache-clean temp --dry-run
 
-# 3. ネイティブシェルの実行 (native-scripts配下のものを指定)
-pytoolbox run native:win/fix-network.ps1
+# 3. Dev系ユーティリティの利用 (パイプ連携対応)
+cat data.json | pytoolbox json-format
+pytoolbox uuid --count 5
 
-# 4. Dev系ユーティリティの利用 (パイプ連携対応)
-cat data.json | pytoolbox util json-format
-pytoolbox util uuid --count 5
-
-# 5. GUIの起動
+# 4. GUIの起動
 pytoolbox gui   # pytoolbox-gui を立ち上げてブラウザを開く
 ```
 
@@ -180,18 +191,22 @@ uv tool install ./packages/pytoolbox-gui
 
 ## 8. 実装ロードマップ
 
-* [ ] **Phase 1: コア構造とDevToolsの先行実装**
-  * `uv` モノレポ構成の作成。
-  * `pytoolbox` 内にDevTools系（JSON整形、Base64、UUID生成）のPython関数を実装し、CLIから呼び出せるようにする。
-* [ ] **Phase 2: システム実行エンジン (Runner) の実装**
-  * Subprocessの非同期実行、引数の配列渡しバリデーション、排他制御。
-  * `scripts/` 配下のスクリプト自動検出機能。
-* [ ] **Phase 3: Web GUI (`pytoolbox-gui`) の構築**
-  * FastAPI + HTMX + Tailwind CSS でDevToys風の2ペイン画面を作成。
-  * Dev系（即時反映）とSystem系（SSEコンソール）のUIを統合。
-* [ ] **Phase 4: 履歴保存とOS常駐化**
-  * SQLiteによる実行履歴保存画面の作成。
-  * PCログイン時のバックグラウンド常駐スクリプトの用意。
+各段で、ツールは CLI と GUI を同じ行で出す。行は `docs/roadmap.md`。
+
+* [ ] **段 1: 土台**
+  * 例外と結果の型、`pytoolbox list`、GUI の骨組み（FastAPI、サイドバー、SSE）。
+* [ ] **段 2: 読むだけのツール**
+  * 文字数、正規表現、リソース比較、ハードコーディング検出、フォルダサイズ、UDP 受信。
+* [ ] **段 3: 安全策**
+  * 書き先ごとの排他ロック、SQLite による実行履歴と、その画面（Logs & History）。
+* [ ] **段 4: 書く・消すツール**
+  * CSV 生成、JSON 生成、モック画像、ファイルコピー、フォルダコピー、PDF 分割、ファイル結合、画像クリップ、キャッシュ掃除。
+* [ ] **段 5: システム実行エンジン (Runner)**
+  * Subprocess の実行、引数の配列渡しバリデーション。ツールの中身としてのシェルスクリプトの実行。疎通確認。
+* [ ] **段 6: DevTools 系**
+  * JSON 整形、Base64、UUID 生成。
+
+スクリプトの自動検出と、PC ログイン時の常駐は作らない。スクリプトはツールの中身であり、利用者に見せないので、検出して並べる先が無い。常駐は要らない。
 
 ---
 
