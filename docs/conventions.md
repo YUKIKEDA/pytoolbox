@@ -35,6 +35,7 @@ Recorded in [docs/adr/0001-toolchain.md](adr/0001-toolchain.md).
 | Format and lint | ruff (`just lint` fails on drift)                      |
 | Types           | pyright, `standard`                                    |
 | Tests           | pytest, branch coverage at least 90% (`just coverage`) |
+| GUI tests       | FastAPI `TestClient`, `httpx` in the dev group         |
 | Tasks           | just                                                   |
 
 ## Python
@@ -138,6 +139,33 @@ Call a pure function directly. Files use pytest `tmp_path`. A unit test does not
 ### CLI
 
 argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/design.ja.md` §6). `pytoolbox list` prints each tool with its system and category (§5.1). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000` (§7.2).
+
+`pytoolbox gui` is the only command that starts the GUI. It imports `pytoolbox_gui` when called, so the core does not depend on it. If the package is missing, it prints the install command of §7.1 to stderr and exits `2`. If the port is in use, it exits `2` and opens no browser.
+
+### GUI HTTP
+
+The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints follow what the screens need. There is no JSON data API; programs use the CLI and the library. Sources: [Hypermedia APIs vs. Data APIs](https://htmx.org/essays/hypermedia-apis-vs-data-apis/), [htmx documentation](https://htmx.org/docs/), [RFC 9110 §9.2.1](https://www.rfc-editor.org/rfc/rfc9110#section-9.2.1).
+
+| Request                   | Does                                                                 |
+| ------------------------- | -------------------------------------------------------------------- |
+| `GET /`                   | The shell page: sidebar and an empty pane                            |
+| `GET /tools/<tool>`       | The tool's page. A request with `HX-Request` gets only the pane      |
+| `POST /tools/<tool>`      | Runs a tool that returns at once, and returns the result fragment    |
+| `POST /tools/<tool>/runs` | Starts a streaming run, and returns a fragment that holds the run ID |
+| `GET /runs/<id>/events`   | The run's SSE stream                                                 |
+| `POST /runs/<id>/cancel`  | Sets the run's `cancel`. Returns `204`                               |
+| `GET /static/<file>`      | Assets shipped in the package                                        |
+
+- Paths use the tool's CLI name. No system prefix and no `/api`.
+- `GET` never runs a tool or changes state; browsers prefetch and follow links. Every run is `POST`, even for a read-only tool.
+- Form fields carry the CLI options in `snake_case` (`--dry-run` is `dry_run`) and are form-encoded, the HTMX default. The handler calls the same library function as the CLI. Paths are typed as text; the server reads the local disk, so there is no upload.
+- `InputError` returns `422` and `OperationError` returns `500`, each with an error fragment. Any other exception returns `500` with a generic message and is logged. The shell page sets `htmx-config` `responseHandling` so `422` and `500` swap into the error area; HTMX does not swap `4xx` and `5xx` by default.
+- SSE is a `StreamingResponse` with `text/event-stream` and `Cache-Control: no-cache`. Each event is named, and its data is one HTML fragment: `progress` for `Progress`, `log` for `LogEvent`, `result` for the final result, `error` for a failure. The last event is `done`, and the page closes the stream with `sse-close="done"`. Sources: [htmx SSE extension](https://htmx.org/extensions/sse/), [WHATWG server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html).
+- Run IDs are `uuid4` hex. Runs live in memory. An unknown ID returns `404`. Closing the page does not cancel a run; `POST /runs/<id>/cancel` does. Stopping the server cancels every run.
+- Every request's `Host` must be `127.0.0.1:<port>` or `localhost:<port>`, or it returns `403`. This stops DNS rebinding. Every `POST` must carry an `Origin` of `http://127.0.0.1:<port>` or `http://localhost:<port>`; a missing or `null` `Origin` returns `403`. This stops other sites from posting to the server. No CORS headers are sent. Sources: [GitHub: Localhost dangers](https://github.blog/security/application-security/localhost-dangers-cors-and-dns-rebinding/), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
+- HTMX and its SSE extension ship under `static/` at pinned versions. No CDN: the GUI has tools for a broken network, and it must load without one. Nothing in the frontend is built.
+- The CSS is one hand-written file, `static/app.css`, in plain CSS: custom properties for colors and spacing, grid for the layout, nesting where it helps. No CSS framework and no utility classes. Class names describe the part (`sidebar`, `pane`, `console`), not the look.
+- Tests use `TestClient` and send `Host` and `Origin` as a browser would. A test also checks each `403` case.
 
 `cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/design.ja.md` §9.
 

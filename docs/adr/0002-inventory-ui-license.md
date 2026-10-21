@@ -11,7 +11,7 @@ The owner's draft, `docs/design.ja.md`, sets the concept and the architecture. T
 ## Decision
 
 - The initial tool list is built from those six tools, in `docs/design.ja.md` §9. It does not narrow the concept or the architecture of the draft.
-- The GUI is the draft's local web app: FastAPI, Jinja2, HTMX, and Tailwind. The same Python core serves the CLI and the GUI. eel and per-tool tkinter windows are not the UI.
+- The GUI is the draft's local web app: FastAPI, Jinja2, HTMX, and one hand-written CSS file ([ADR 0009](0009-gui-http.md) replaced Tailwind). The same Python core serves the CLI and the GUI. eel and per-tool tkinter windows are not the UI.
 - The license is MIT, in `LICENSE`.
 
 ## Consequences

@@ -75,10 +75,11 @@ pytoolbox/
 │   └── pytoolbox-gui/             # 【Web GUI】
 │       ├── pyproject.toml
 │       └── src/pytoolbox_gui/
-│           ├── cli.py             # `pytoolbox-gui` 起動コマンド
+│           ├── cli.py             # `pytoolbox gui` から呼ぶ起動部 (uvicorn)
 │           ├── server.py          # FastAPI / APIルーティング
 │           ├── sse.py             # リアルタイムログ配信
-│           └── templates/         # HTML (Jinja2 + HTMX + Tailwind)
+│           ├── static/            # htmx と CSS を同梱する (CDN は使わない)
+│           └── templates/         # HTML (Jinja2 + HTMX + CSS)
 │
 └── native-scripts/                # 【ネイティブシェル専用領域】
     ├── mac/                       # macOS専用 (.sh, AppleScript)
@@ -141,13 +142,20 @@ DevToysライクなレイアウトを採用し、左サイドバーで全ツー�
 
 分け方は、利用者が扱う対象である。テキストとコードは Developer Utilities、PC のファイル、ストレージ、ネットワークは System Operations に置く。安全策は分類ではなく、ツールごとに付く。`pytoolbox list` も同じ系統と分類を示す。
 
+上の木は、最終的な置き場所である。サイドバーは登録簿から描き、登録済みのツールがある分類だけを出す。押して動かない項目は出さない。
+
 ### 5.2 処理フローの違い（FastAPI実装）
-* **Dev系（即時API）**:
-  通常のリクエスト/レスポンス。高速に動作するため待機なし。
-  `POST /api/dev/format-json` ──▶ 即座に整形結果のJSON/テキストを返却。
-* **System系（SSEストリーミングAPI）**:
-  重い処理・OS操作。
-  `GET /api/system/run/clean-disk?dry_run=true` ──▶ **Server-Sent Events (SSE)** でターミナル出力をリアルタイム配信。
+
+サーバーは HTML を返す。HTMX が受けて画面の一部を差し替える。JSON を返すデータ API は持たない。プログラムから使う口は CLI とライブラリである。パスはツール名で揃え、系統では分けない。流すかどうかは系統ではなく、ツールの性質で決まるからである。
+
+* **すぐ返すツール**:
+  `POST /tools/json-format` ──▶ 結果の HTML 断片を返す。
+* **流すツール（一括処理、UDP 受信）**:
+  `POST /tools/cache-clean/runs` ──▶ 実行を始め、実行 ID を埋めた HTML 断片を返す。
+  `GET /runs/<id>/events` ──▶ **Server-Sent Events (SSE)** で進捗とログをリアルタイム配信。
+  `POST /runs/<id>/cancel` ──▶ 止める。
+* ツールを走らせるのは POST だけである。GET はブラウザの先読みやリンクでも走るので、画面と SSE の受信にだけ使う。
+* 書く・消すツールを持つローカルのサーバーなので、他のサイトからの要求と DNS リバインディングを拒む。細目は `docs/conventions.md`。
 
 ---
 
@@ -167,7 +175,7 @@ cat data.json | pytoolbox json-format
 pytoolbox uuid --count 5
 
 # 4. GUIの起動
-pytoolbox gui   # pytoolbox-gui を立ち上げてブラウザを開く
+pytoolbox gui   # GUI サーバーを立ち上げてブラウザを開く。pytoolbox-gui が無ければ入れ方を示す
 ```
 
 ---
@@ -180,12 +188,14 @@ pytoolbox gui   # pytoolbox-gui を立ち上げてブラウザを開く
 uv tool install ./packages/pytoolbox
 
 # Web GUIを含むフル機能を使用する場合
-uv tool install ./packages/pytoolbox-gui
+uv tool install ./packages/pytoolbox --with ./packages/pytoolbox-gui
 ```
+
+`uv tool install` は、名指ししたパッケージのコマンドだけを出す。`pytoolbox-gui` を名指しすると `pytoolbox` が出ないので、`pytoolbox` を名指しし、GUI を同じ環境に入れる。
 
 ### 7.2 起動
 * **CLI**: そのまま `pytoolbox` コマンドを使用。
-* **GUI**: ターミナルで `pytoolbox-gui` と打つと、ローカルWebサーバー（`127.0.0.1:8000`）が立ち上がり、ブラウザが自動的に開く。
+* **GUI**: ターミナルで `pytoolbox gui` と打つと、ローカルWebサーバー（`127.0.0.1:8000`、uvicorn）が立ち上がり、ブラウザが自動的に開く。起動のコマンドはこれ一つである。
 
 ---
 
