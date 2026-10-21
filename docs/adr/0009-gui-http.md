@@ -11,7 +11,7 @@ M1-1 builds the GUI shell. The draft names FastAPI, Jinja2, HTMX, and Tailwind, 
 ## Decision
 
 - uvicorn serves the app. FastAPI alone does not listen on a port.
-- `httpx` is a dev dependency, for FastAPI's `TestClient`.
+- `httpx2` is a dev dependency, for FastAPI's `TestClient`. Starlette builds the test client on `httpx2` since 1.2 and deprecates plain `httpx` ([Starlette Test Client](https://starlette.dev/testclient/)).
 - `pytoolbox gui` is the only start command. A CLI-only install still works, and the user remembers one command. `uv tool install` exposes only the named package's commands, so the full install names `pytoolbox` and adds the GUI with `--with`.
 - The sidebar is drawn from the tool registry and shows only categories that have tools. An entry must open a working screen.
 - The server is a hypermedia API that returns HTML. HTMX swaps HTML, so a JSON data API would add a second contract with no consumer. Paths use tool names, because streaming depends on the tool, not the system: mock-image streams progress and sits under Developer Utilities.

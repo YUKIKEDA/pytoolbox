@@ -9,10 +9,11 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["packages/pytoolbox"]
+members = ["packages/pytoolbox", "packages/pytoolbox-gui"]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.16",
     "pyright>=1.1.390",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
@@ -23,7 +24,12 @@ dev = [
 required-version = ">=0.17"
 line-length = 100
 target-version = "py312"
-src = ["packages/pytoolbox/src", "packages/pytoolbox/tests"]
+src = [
+    "packages/pytoolbox/src",
+    "packages/pytoolbox/tests",
+    "packages/pytoolbox-gui/src",
+    "packages/pytoolbox-gui/tests",
+]
 extend-exclude = [".agents", "docs/design.ja.md"]
 
 [tool.ruff.format]
@@ -75,6 +81,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "packages/**/tests/**" = ["D", "S101"]
+"packages/pytoolbox/src/pytoolbox/cli.py" = ["T20"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["pytoolbox", "pytoolbox_gui"]
@@ -83,11 +90,11 @@ known-first-party = ["pytoolbox", "pytoolbox_gui"]
 convention = "google"
 
 [tool.pytest.ini_options]
-testpaths = ["packages/pytoolbox/tests"]
+testpaths = ["packages/pytoolbox/tests", "packages/pytoolbox-gui/tests"]
 addopts = ["-q"]
 
 [tool.coverage.run]
-source = ["pytoolbox"]
+source = ["pytoolbox", "pytoolbox_gui"]
 branch = true
 
 [tool.coverage.report]

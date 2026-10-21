@@ -1,0 +1,165 @@
+/* One hand-written stylesheet. Plain CSS, no build (docs/conventions.md, GUI HTTP). */
+
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f6f7f9, #1b1d21);
+  --surface: light-dark(#ffffff, #24272d);
+  --text: light-dark(#1f2328, #e6e8eb);
+  --muted: light-dark(#5b636e, #9aa3ad);
+  --border: light-dark(#d5d9de, #3a3f47);
+  --accent: light-dark(#0b63c5, #5aa9ff);
+  --danger: light-dark(#b42318, #ff8a80);
+  --console-bg: #101214;
+  --console-text: #d8dee4;
+  --space: 0.5rem;
+  --radius: 6px;
+  --sidebar-width: 16rem;
+  --font: system-ui, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 var(--font);
+}
+
+a {
+  color: var(--accent);
+}
+
+.sidebar {
+  padding: calc(var(--space) * 2);
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+
+  & ul {
+    margin: 0 0 var(--space);
+    padding: 0;
+    list-style: none;
+  }
+
+  & li a {
+    display: block;
+    padding: calc(var(--space) / 2) var(--space);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--bg);
+    }
+  }
+}
+
+.sidebar-home {
+  display: block;
+  margin-bottom: calc(var(--space) * 2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sidebar-system > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sidebar-category {
+  margin: var(--space) 0 0;
+  color: var(--muted);
+  font-size: 0.85em;
+  text-transform: uppercase;
+}
+
+.sidebar-empty {
+  color: var(--muted);
+}
+
+.main {
+  padding: calc(var(--space) * 3);
+  min-width: 0;
+}
+
+.error-area:empty {
+  display: none;
+}
+
+.error {
+  margin: 0 0 calc(var(--space) * 2);
+  padding: var(--space) calc(var(--space) * 2);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  color: var(--danger);
+}
+
+.pane {
+  display: grid;
+  gap: calc(var(--space) * 2);
+}
+
+/* The DevToys layout: input on the left, output on the right. */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--space) * 2);
+
+  & textarea {
+    width: 100%;
+    min-height: 20rem;
+    font-family: var(--mono);
+  }
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  padding: var(--space);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+}
+
+button {
+  cursor: pointer;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.console {
+  margin: 0;
+  min-height: 12rem;
+  max-height: 32rem;
+  overflow-y: auto;
+  padding: var(--space) calc(var(--space) * 2);
+  border-radius: var(--radius);
+  background: var(--console-bg);
+  color: var(--console-text);
+  font-family: var(--mono);
+  white-space: pre-wrap;
+
+  & > span {
+    display: block;
+  }
+}
+
+.run {
+  display: grid;
+  gap: var(--space);
+}
+
+.run-progress progress {
+  width: 100%;
+}

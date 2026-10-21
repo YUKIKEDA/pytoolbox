@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="htmx-config" content='{"responseHandling": [
+      {"code": "204", "swap": false},
+      {"code": "[23]..", "swap": true},
+      {"code": "(404|422|500)", "swap": true, "error": true, "target": "#error"},
+      {"code": "...", "swap": false, "error": true}
+    ]}'>
+    <title>pytoolbox</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="/static/htmx-2.0.11.min.js"></script>
+    <script src="/static/htmx-ext-sse-2.2.4.min.js"></script>
+  </head>
+  <body hx-ext="sse">
+    <nav class="sidebar">
+      <a class="sidebar-home" href="/" hx-get="/" hx-target="#pane" hx-push-url="true">pytoolbox</a>
+      {% for system, categories in sidebar.items() %}
+      <details class="sidebar-system" open>
+        <summary>{{ system }}</summary>
+        {% for category, tools in categories.items() %}
+        <p class="sidebar-category">{{ category }}</p>
+        <ul>
+          {% for tool in tools %}
+          <li>
+            <a href="/tools/{{ tool.name }}" hx-get="/tools/{{ tool.name }}" hx-target="#pane"
+               hx-push-url="true" title="{{ tool.summary }}">{{ tool.name }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endfor %}
+      </details>
+      {% else %}
+      <p class="sidebar-empty">No tools yet.</p>
+      {% endfor %}
+    </nav>
+    <main class="main">
+      <div id="error" class="error-area" aria-live="polite"></div>
+      <div id="pane" class="pane">{% include pane %}</div>
+    </main>
+  </body>
+</html>

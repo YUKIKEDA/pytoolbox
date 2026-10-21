@@ -1,0 +1,8 @@
+<p>{{ event.succeeded }} succeeded, {{ event.failures | length }} failed{% if event.cancelled %}, cancelled{% endif %}.</p>
+{% if event.failures %}
+<ul class="failures">
+  {% for failure in event.failures %}
+  <li>{{ failure.path }}: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

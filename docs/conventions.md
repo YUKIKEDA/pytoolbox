@@ -7,7 +7,18 @@ Agent entry: [AGENTS.md](../AGENTS.md). There is no `CONTRIBUTING.md`.
 uv workspace. The root project is not published (`tool.uv.package = false`).
 
 ```text
-packages/pytoolbox/     core library. CLI comes with the Issue that adds it
+packages/pytoolbox/     core library and CLI
+  src/pytoolbox/cli.py       `pytoolbox` command: list, gui, one subcommand per tool
+  src/pytoolbox/errors.py    PytoolboxError, InputError, OperationError
+  src/pytoolbox/results.py   Progress, ItemFailure, BatchResult, LogEvent, Cancel
+  src/pytoolbox/registry.py  Tool, System, TOOLS
+packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
+  src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
+  src/pytoolbox_gui/server.py   create_app(): routes, Host and Origin guard, errors
+  src/pytoolbox_gui/sse.py      Run, Runs, SSE encoding
+  src/pytoolbox_gui/screens.py  Screen, Fragment, SCREENS
+  src/pytoolbox_gui/templates/  shell, pane, and event fragments
+  src/pytoolbox_gui/static/     app.css, htmx, the SSE extension
 packages/<name>/tests/  tests for that package
 docs/design.ja.md       the owner's draft spec, Japanese
 docs/roadmap.md         ID, title, Issue, status
@@ -16,7 +27,9 @@ native-scripts/         created with the Issue that adds a shell script
 .dev/                   ignored local notes
 ```
 
-`packages/pytoolbox-gui` is named in the draft and is not a workspace member yet. Add it in the Issue that builds it. Do not add an empty module, recipe, or script ahead of that Issue.
+Do not add an empty module, recipe, or script ahead of the Issue that needs it.
+
+A tool row adds one `Tool` to `registry.TOOLS` and one `Screen` to `screens.SCREENS`, in the same PR. `create_app` refuses a tool without a screen and a screen without a tool, so the CLI and the GUI cannot drift apart.
 
 A row that adds a module adds its line to this file in the same PR.
 
@@ -35,7 +48,7 @@ Recorded in [docs/adr/0001-toolchain.md](adr/0001-toolchain.md).
 | Format and lint | ruff (`just lint` fails on drift)                      |
 | Types           | pyright, `standard`                                    |
 | Tests           | pytest, branch coverage at least 90% (`just coverage`) |
-| GUI tests       | FastAPI `TestClient`, `httpx` in the dev group         |
+| GUI tests       | FastAPI `TestClient`, `httpx2` in the dev group        |
 | Tasks           | just                                                   |
 
 ## Python
@@ -100,11 +113,11 @@ Hard failures raise. `InputError` is a bad argument or a missing path. `Operatio
 
 A batch that can fail on one item and continue returns `BatchResult`: how many succeeded, the failures (`path` and `message`), and `cancelled`. If the output directory itself cannot be created, raise `OperationError` and write nothing. Do not report that as an item failure.
 
-A long batch yields `Progress` (`completed`, `total`, `path`) and yields one `BatchResult` last. No progress callback. A session exposes start, stop, and `LogEvent` values. Do not add a logging framework.
+A long batch yields `Progress` (`completed`, `total`, `path`) and yields one `BatchResult` last. No progress callback. A session exposes start, stop, and `LogEvent` values (`time` in timezone-aware UTC, `message`). Do not add a logging framework.
 
 A long call takes `cancel: Callable[[], bool] | None = None` and checks it between items. On cancel, return what finished with `cancelled=True`.
 
-The types are created in M1-1, the foundation. Do not add an empty module ahead of that.
+The types live in `pytoolbox.errors` and `pytoolbox.results`. A failure is a `PytoolboxError` subclass, not a new base.
 
 ### Safeguards
 
@@ -136,9 +149,15 @@ Only the runner starts a process: an external command or a script under `native-
 
 Call a pure function directly. Files use pytest `tmp_path`. A unit test does not open a socket or the network. Branch coverage stays at least 90%.
 
+A test never starts the real GUI server: `pytoolbox gui` tests replace `serve`, and `serve` tests replace `uvicorn.Server` and the port check. The server is tested through `TestClient` with `base_url="http://127.0.0.1:8000"`.
+
 ### CLI
 
 argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/design.ja.md` §6). `pytoolbox list` prints each tool with its system and category (§5.1). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000` (§7.2).
+
+A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Errors print `error: <message>` to stderr.
+
+`pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
 `pytoolbox gui` is the only command that starts the GUI. It imports `pytoolbox_gui` when called, so the core does not depend on it. If the package is missing, it prints the install command of §7.1 to stderr and exits `2`. If the port is in use, it exits `2` and opens no browser.
 
@@ -159,11 +178,12 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 - Paths use the tool's CLI name. No system prefix and no `/api`.
 - `GET` never runs a tool or changes state; browsers prefetch and follow links. Every run is `POST`, even for a read-only tool.
 - Form fields carry the CLI options in `snake_case` (`--dry-run` is `dry_run`) and are form-encoded, the HTMX default. The handler calls the same library function as the CLI. Paths are typed as text; the server reads the local disk, so there is no upload.
+- An unknown tool on `GET` returns `404`. A `POST` to the endpoint of the other kind (`/tools/<tool>` for a streaming tool, or the reverse) is `InputError`.
 - `InputError` returns `422` and `OperationError` returns `500`, each with an error fragment. Any other exception returns `500` with a generic message and is logged. The shell page sets `htmx-config` `responseHandling` so `422` and `500` swap into the error area; HTMX does not swap `4xx` and `5xx` by default.
-- SSE is a `StreamingResponse` with `text/event-stream` and `Cache-Control: no-cache`. Each event is named, and its data is one HTML fragment: `progress` for `Progress`, `log` for `LogEvent`, `result` for the final result, `error` for a failure. The last event is `done`, and the page closes the stream with `sse-close="done"`. Sources: [htmx SSE extension](https://htmx.org/extensions/sse/), [WHATWG server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html).
+- SSE is a `StreamingResponse` with `text/event-stream` and `Cache-Control: no-cache`. Each event is named, and its data is one HTML fragment: `progress` for `Progress`, `log` for `LogEvent`, `result` for the final result, `error` for a failure. The last event is `done` with the data `done`, and the page closes the stream with `sse-close="done"`; a browser does not dispatch an event whose data is empty. A run has one reader. Sources: [htmx SSE extension](https://htmx.org/extensions/sse/), [WHATWG server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html).
 - Run IDs are `uuid4` hex. Runs live in memory. An unknown ID returns `404`. Closing the page does not cancel a run; `POST /runs/<id>/cancel` does. Stopping the server cancels every run.
 - Every request's `Host` must be `127.0.0.1:<port>` or `localhost:<port>`, or it returns `403`. This stops DNS rebinding. Every `POST` must carry an `Origin` of `http://127.0.0.1:<port>` or `http://localhost:<port>`; a missing or `null` `Origin` returns `403`. This stops other sites from posting to the server. No CORS headers are sent. Sources: [GitHub: Localhost dangers](https://github.blog/security/application-security/localhost-dangers-cors-and-dns-rebinding/), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
-- HTMX and its SSE extension ship under `static/` at pinned versions. No CDN: the GUI has tools for a broken network, and it must load without one. Nothing in the frontend is built.
+- HTMX and its SSE extension ship under `static/` at pinned versions, with the version in the file name (`htmx-2.0.11.min.js`, `htmx-ext-sse-2.2.4.min.js`). A new version is a new file whose SHA-384 matches the integrity value in the htmx docs. No CDN: the GUI has tools for a broken network, and it must load without one. Nothing in the frontend is built.
 - The CSS is one hand-written file, `static/app.css`, in plain CSS: custom properties for colors and spacing, grid for the layout, nesting where it helps. No CSS framework and no utility classes. Class names describe the part (`sidebar`, `pane`, `console`), not the look.
 - Tests use `TestClient` and send `Host` and `Origin` as a browser would. A test also checks each `403` case.
 

@@ -15,6 +15,6 @@ native-scripts/         only when an Issue adds a shell script
 ```
 
 - `docs/design.ja.md` is the draft spec. `docs/roadmap.md` lists work: ID, title, Issue, status. `docs/conventions.md` holds the directory tree and the toolchain.
-- `packages/pytoolbox-gui` is added by the Issue that builds the GUI. Do not add it empty.
+- `packages/pytoolbox-gui` is the GUI. A tool row adds its screen there in the same PR as its CLI command.
 - Do not add a dependency the design does not name. A new dependency is a design change first.
 - A rule states a working constraint. It does not copy the spec's tool list or function list.
