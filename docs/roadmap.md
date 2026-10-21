@@ -27,10 +27,11 @@ M1-1.
 | M1-13 | Add file-merge | | Not started |
 | M1-14 | Add image-clip | | Not started |
 | M1-15 | Add udp | | Not started |
+| M1-16 | Add cache-clean | | Not started |
 | M2-1 | Add the GUI for the commands above | | Not started |
 
 M1 is the library and the CLI. M2 is the GUI for those same commands. A row does not start while an earlier row in the same milestone is open.
 
 ## Intentionally out of scope
 
-Base64, JWT, JSON formatting, UUID, password, and hash generators. Cache cleanup, Wi-Fi reset, environment setup, the execution-history database, and a login-resident process.
+Base64, JWT, JSON formatting, UUID, password, and hash generators. Wi-Fi reset, environment setup, the execution-history database, and a login-resident process.

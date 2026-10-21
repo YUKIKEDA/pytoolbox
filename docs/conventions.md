@@ -123,6 +123,8 @@ Call a pure function directly. Files use pytest `tmp_path`. A unit test does not
 
 argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. The command names are in `docs/design.ja.md` §6. `pytoolbox gui` binds `127.0.0.1:8000`.
 
+`cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/design.ja.md` §9.2.
+
 Generators (`csv-gen`, `json-gen`, `mock-image`) take an optional `seed: int | None`. Omit it and the output is not deterministic.
 
 ```python
