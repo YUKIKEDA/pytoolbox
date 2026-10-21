@@ -36,7 +36,7 @@ Read the rules that match the work. `alwaysApply` rules apply to every change. A
 | `similar-findings`     | Fix the same kind of problem where it also occurs                      |
 | `powershell-shell`     | Shell syntax on this setup                                             |
 | `language`             | English code; Japanese spec; bilingual README and roadmap              |
-| `python`               | ruff, pyright, pytest, no `shell=True`                                 |
+| `python`               | Format, lint, types, and docstrings: `docs/conventions.md`            |
 
 ## Skills
 
