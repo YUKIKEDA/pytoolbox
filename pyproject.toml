@@ -24,7 +24,7 @@ required-version = ">=0.17"
 line-length = 100
 target-version = "py312"
 src = ["packages/pytoolbox/src", "packages/pytoolbox/tests"]
-extend-exclude = [".agents"]
+extend-exclude = [".agents", "docs/design.ja.md"]
 
 [tool.ruff.format]
 quote-style = "double"

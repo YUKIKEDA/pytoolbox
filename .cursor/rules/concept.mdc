@@ -1,0 +1,21 @@
+---
+description: The concept in the spec stays in the owner's words
+alwaysApply: true
+---
+
+# Concept
+
+`docs/design.ja.md` §1 is the owner's concept. Keep that text. Do not replace it with a summary, a status line, or a list of decisions.
+
+An agreed tool list is the initial tool list. It is not the concept. Do not turn the concept into a tool table, roadmap rows, or an out-of-scope list without the owner's decision.
+
+```text
+# BAD
+Owner's §1: PC運用管理と DevToys 互換の開発ユーティリティを一つの基盤に集約する
+Agent: rewrites §1 as 日常のファイル操作、テキスト処理、通信確認をまとめる
+Agent: lists the draft's other tools as out of scope, or as a table and rows
+
+# GOOD
+Owner's §1 stays as written.
+§9 stays the agreed initial tool list. Other tools wait for a Grill and an Issue.
+```

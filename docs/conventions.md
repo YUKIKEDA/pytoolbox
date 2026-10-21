@@ -9,7 +9,7 @@ uv workspace. The root project is not published (`tool.uv.package = false`).
 ```text
 packages/pytoolbox/     core library. CLI comes with the Issue that adds it
 packages/<name>/tests/  tests for that package
-docs/design.ja.md       draft spec, Japanese, not a contract until a design Issue says so
+docs/design.ja.md       the owner's draft spec, Japanese
 docs/roadmap.md         ID, title, Issue, status
 docs/adr/               one decision per file, NNNN-slug.md
 native-scripts/         created with the Issue that adds a shell script
@@ -121,9 +121,9 @@ Call a pure function directly. Files use pytest `tmp_path`. A unit test does not
 
 ### CLI
 
-argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. The command names are in `docs/design.ja.md` §6. `pytoolbox gui` binds `127.0.0.1:8000`.
+argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. The command structure is `docs/design.ja.md` §6. The GUI listens on `127.0.0.1:8000` (§7.2).
 
-`cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/design.ja.md` §9.2.
+`cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/design.ja.md` §9.
 
 Generators (`csv-gen`, `json-gen`, `mock-image`) take an optional `seed: int | None`. Omit it and the output is not deterministic.
 

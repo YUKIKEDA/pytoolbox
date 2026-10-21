@@ -6,13 +6,13 @@ Personal toolbox: a Python core library and CLI, and a web GUI planned beside it
 
 | What                           | Where                                                            |
 | ------------------------------ | ---------------------------------------------------------------- |
-| Design (draft, Japanese)       | `docs/design.ja.md`. Not a contract until a design Issue says so |
+| Design (draft, Japanese)       | `docs/design.ja.md`. The owner's draft; change it through a Grill |
 | Order and status of work       | `docs/roadmap.md`                                                |
 | Modules and toolchain          | `docs/conventions.md`                                            |
 | Why a decision was made        | `docs/adr/` (`0001-...`, one decision per file)                  |
 | Build, test, and gate commands | `justfile`                                                       |
 
-The current row's ID lives only in `docs/roadmap.md`. There is no current row.
+The current row's ID lives only in `docs/roadmap.md`.
 
 ## Required rules
 
@@ -38,6 +38,8 @@ Read the rules that match the work. `alwaysApply` rules apply to every change. A
 | `language`             | English code; Japanese spec; bilingual README and roadmap              |
 | `python`               | Format, lint, types, and docstrings: `docs/conventions.md`            |
 | `open-decisions`       | Elementary conventions are decided in the turn, not handed back         |
+| `concept`              | The spec's concept stays in the owner's words                           |
+| `draft`                | Change the owner's draft only with a reason and agreement from a Grill  |
 
 ## Skills
 

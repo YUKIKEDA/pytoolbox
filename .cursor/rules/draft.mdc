@@ -1,0 +1,30 @@
+---
+description: The owner's draft changes only with a reason and the owner's agreement
+alwaysApply: true
+---
+
+# Draft
+
+`docs/design.ja.md` is the owner's draft. Its text is the owner's: the architecture, the directories, the CLI, the GUI, and the phases.
+
+Change it only when there is a reason from the product's requirements and the owner agreed in a Grill. A decision about something else, such as a tool list or a type contract, is not consent to rewrite the draft around it. When the two conflict, ask in a Grill. Do not pick one and rewrite the other.
+
+Do not call the draft "not a contract" to justify ignoring it.
+
+"The draft says so" is not a reason in a Grill. A recommendation rests on the product's requirements, for the draft's choice and for the change alike. When no requirement supports the draft's choice, say so, and recommend from the requirements.
+
+```text
+# BAD
+Owner agrees on an initial tool list.
+Agent: rewrites the architecture, the CLI, and the phases to fit that list
+
+# BAD
+Agent: recommends `run` and `util` because the draft shows them
+
+# GOOD
+Owner agrees on an initial tool list.
+Agent: adds the list, keeps the draft's text, and asks in a Grill where the list and the draft conflict
+
+# GOOD
+Agent: says the draft gives no reason for two verbs, and recommends from what the user must type and what a tool must guard
+```

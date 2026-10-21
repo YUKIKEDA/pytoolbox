@@ -30,8 +30,8 @@ M1-1。
 | M1-16 | Add cache-clean | | Not started |
 | M2-1 | Add the GUI for the commands above | | Not started |
 
-M1 はライブラリと CLI である。M2 は同じコマンドの GUI である。同じマイルストーンで前の行が開いているあいだ、次の行は始めない。
+M1 は、`docs/design.ja.md` §9 の初期ツール一覧のライブラリと CLI である。M2 は、そのコマンドの GUI である。同じマイルストーンで前の行が開いているあいだ、次の行は始めない。
 
 ## Intentionally out of scope
 
-Base64、JWT、JSON 整形、UUID、パスワード、ハッシュ。Wi-Fi リセット、環境キッティング、実行履歴 DB、ログイン常駐。
+無し。

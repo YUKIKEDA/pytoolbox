@@ -11,7 +11,7 @@ Grill (when the design branches) → Issue → branch → work → PR → human 
 
 1. Grill when the API, the meaning, or a milestone boundary branches. Skill: `.agents/skills/grilling/SKILL.md`. Skip it when the Issue already has acceptance text and the design settles the question.
 2. One Issue is one PR. Create the Issue from a template in `.github/ISSUE_TEMPLATE/`. Blank issues are off.
-3. A change to the meaning of the spec is a `design` Issue that updates `docs/design.ja.md` before any implementation Issue. The Japanese file is the spec. `docs/design.ja.md` stays a draft until a design Issue says it is the contract.
+3. A change to the meaning of the spec is a `design` Issue that updates `docs/design.ja.md` before any implementation Issue. The Japanese file is the spec. It is the owner's draft. Changing its meaning needs a reason and the owner's agreement from a Grill (`draft` rule).
 4. Acceptance text lives on the Issue. The roadmap keeps ID, title, Issue, and status only.
 5. Branch from `main` after a fetch: `git switch -c <branch> origin/main`. `git switch -c` alone starts from the branch that is checked out. The name is `type/<issue-number>-<slug>`. `type` is a Conventional Commits type.
 6. Open the PR in the same turn that the branch is pushed. Use `.github/pull_request_template.md`. Write `Closes #N` on its own line under `## Related`.
