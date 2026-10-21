@@ -13,6 +13,8 @@ Do not call the draft "not a contract" to justify ignoring it.
 
 "The draft says so" is not a reason in a Grill. A recommendation rests on the product's requirements, for the draft's choice and for the change alike. When no requirement supports the draft's choice, say so, and recommend from the requirements.
 
+Before the first round of a Grill that changes the draft, read the draft and list every line the decisions touch and every draft item they would leave out. Each one is a question in that Grill. No draft item is dropped without a question.
+
 ```text
 # BAD
 Owner agrees on an initial tool list.
@@ -25,6 +27,14 @@ Agent: recommends `run` and `util` because the draft shows them
 Owner agrees on an initial tool list.
 Agent: adds the list, keeps the draft's text, and asks in a Grill where the list and the draft conflict
 
+# BAD
+Owner agrees on a one-level CLI and a new build order.
+Agent: rewrites the phases and drops `run native:` and the login resident without asking
+
 # GOOD
 Agent: says the draft gives no reason for two verbs, and recommends from what the user must type and what a tool must guard
+
+# GOOD
+Owner agrees on a one-level CLI and a new build order.
+Agent: lists the draft lines they touch, and asks about `run native:`, script detection, and the login resident in the Grill
 ```
