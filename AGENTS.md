@@ -38,6 +38,7 @@ Read the rules that match the work. `alwaysApply` rules apply to every change. A
 | `language`             | English code; Japanese spec; bilingual README and roadmap              |
 | `python`               | Format, lint, types, and docstrings: `docs/conventions.md`            |
 | `open-decisions`       | Elementary conventions are decided in the turn, not handed back         |
+| `concept`              | The spec's concept stays in the owner's words                           |
 
 ## Skills
 
