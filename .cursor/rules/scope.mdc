@@ -1,0 +1,17 @@
+---
+description: Scope is decided by requirements, not by effort; no half-shipped capabilities
+alwaysApply: true
+---
+
+# Scope
+
+The reason for a design choice is the product concept, its goal, and the requirements that realize them. Implementation volume and ease of implementation are not reasons. If a requirement cannot be met, recommend "do not build it" over a reduced version.
+
+Do not recommend a partial implementation because it is smaller or easier. If a split is real, the same decision names where the rest lives: a roadmap row with an ID and an Issue (or `Set after Grill on #n`), or an entry under **Intentionally out of scope**.
+
+Not allowed:
+
+- A capability that the CLI supports and the GUI does not, or the reverse, when the spec says both.
+- A system tool that mutates the machine and ships without the dry-run path the spec requires.
+
+There is no release until a roadmap row says what `v0.1.0` contains. The version in the package stays `0.0.0` until that row.

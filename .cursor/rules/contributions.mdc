@@ -1,0 +1,20 @@
+---
+description: Personal repository; outside issues and pull requests are not accepted
+alwaysApply: true
+---
+
+# Contributions
+
+This is a personal tool. The owner does not accept issues or pull requests from anyone else.
+
+The Issue and PR flow in `workflow` is the owner's own process. An Issue or PR opened by someone else is not work to do. Tell the owner and stop. Do not implement it, review it as if it were in scope, or invite more.
+
+Do not add `CONTRIBUTING.md`. Do not write "contributions welcome", "open an issue", or "please PR" in README, docs, or templates.
+
+```text
+# BAD
+README: Contributions are welcome. Open an issue from a template.
+
+# GOOD
+README: Personal project. Outside issues and pull requests are not accepted.
+```

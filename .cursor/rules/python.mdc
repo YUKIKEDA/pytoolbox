@@ -1,0 +1,25 @@
+---
+description: Python style, types, tests, and process execution
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python
+
+Details: `docs/conventions.md`. Format with ruff. Do not hand-wrap lines against it.
+
+- Python 3.12. Annotations on public functions. English docstrings, as full sentences.
+- pyright `standard` must pass. Do not silence a finding with a blanket ignore.
+- Tests are `test_<behavior>` and live in the package's `tests/` directory.
+- No `shell=True`. Build an argument list and pass it to `subprocess` without a shell.
+- A destructive action has a dry-run path in the same change that adds the action.
+- No bare `except`. Name the exception.
+- Imports are ordered by ruff. The package is imported by name, not by altering `sys.path` in a test.
+
+```python
+# BAD
+subprocess.run(command, shell=True)
+
+# GOOD
+subprocess.run(["pwsh", "-NoLogo", "-File", script], check=False)
+```

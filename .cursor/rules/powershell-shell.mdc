@@ -1,0 +1,17 @@
+---
+description: Shell syntax on this Windows setup
+alwaysApply: true
+---
+
+# Shell
+
+The default shell is PowerShell. A Git Bash tool also exists, with POSIX syntax. Use the syntax of the tool you call.
+
+- In PowerShell: no `export`, no bash heredoc `<<EOF`. PowerShell 5 has no `&&`. Quote refs such as `@{u}`.
+- Pass multi-line text to a native command with a single-quoted here-string whose closing `'@` is at column 0.
+- Use absolute paths for targets of `Remove-Item` and `Move-Item`.
+- For long `gh` bodies use a UTF-8 file written by the editor and `--body-file`. Do not build that file with a heredoc when the text contains backslashes.
+- `just` recipes run in PowerShell on Windows (`set windows-shell` in `justfile`) and in `sh` elsewhere. Keep recipes to simple commands that work in both.
+- `python` on PATH may be 3.10. `python3` may be the Microsoft Store stub. The toolchain is `uv run`, which uses the Python pinned in `.python-version`.
+- In the Git Bash tool, a backtick inside a double-quoted string runs a command, and an argument that starts with `/` is turned into a Windows path. Text with backticks or backslashes goes into a file written by the editor.
+- Files may have CRLF or LF. A script that edits a source file matches the text once and writes the same line endings back.

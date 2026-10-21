@@ -1,0 +1,10 @@
+---
+description: A review finding is about the head it was written on
+alwaysApply: true
+---
+
+# Review comments
+
+A review comment is about the commit it was written on. Fix it on that PR, or say why it does not apply to that head. A later PR does not resolve it.
+
+Do not mark a thread resolved unless that head contains the fix, or the author of the comment agrees it does not apply.

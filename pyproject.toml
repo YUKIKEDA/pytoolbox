@@ -1,0 +1,49 @@
+[project]
+name = "pytoolbox-workspace"
+version = "0.0.0"
+description = "Development workspace for pytoolbox. Not published."
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/pytoolbox"]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.390",
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["packages/pytoolbox/src", "packages/pytoolbox/tests"]
+extend-exclude = [".agents"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/pytoolbox/tests"]
+addopts = ["-q"]
+
+[tool.coverage.run]
+source = ["pytoolbox"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_empty = false
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["packages"]
+venvPath = "."
+venv = ".venv"
