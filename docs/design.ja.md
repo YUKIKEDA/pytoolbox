@@ -79,7 +79,7 @@ pytoolbox/
 │           ├── server.py          # FastAPI / APIルーティング
 │           ├── sse.py             # リアルタイムログ配信
 │           ├── static/            # htmx と CSS を同梱する (CDN は使わない)
-│           └── templates/         # HTML (Jinja2 + HTMX + Tailwind)
+│           └── templates/         # HTML (Jinja2 + HTMX + CSS)
 │
 └── native-scripts/                # 【ネイティブシェル専用領域】
     ├── mac/                       # macOS専用 (.sh, AppleScript)

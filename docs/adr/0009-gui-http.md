@@ -18,6 +18,7 @@ M1-1 builds the GUI shell. The draft names FastAPI, Jinja2, HTMX, and Tailwind, 
 - Only `POST` runs a tool. `GET` is safe by HTTP semantics, and browsers prefetch and follow links. A streaming run returns an ID; SSE streams it; a `POST` cancels it. Cancel is required for UDP stop and for batch cancel.
 - Every request is checked for a loopback `Host`, and every `POST` for a loopback `Origin`. A page on another site can post to a loopback server, and DNS rebinding can read from it.
 - HTMX and the CSS ship in the package. The GUI has tools for a broken network, so it must load without one. Nothing in the frontend is built, because a frontend build would remove the reason to use HTMX.
+- The CSS is one hand-written file, `static/app.css`, in plain CSS that browsers read as is (custom properties, grid, nesting). It replaces Tailwind. Tailwind needs a build, and its browser build is for development only and compiles in the browser on every load and swap. A ready-made framework such as Bootstrap is large and class-heavy, and the DevToys layout would still be written by hand. Pico CSS is no longer maintained (v2.1.1 is final). The screens are a sidebar, two text areas, a form, and a console: small enough to style by hand, with no dependency that can stop being maintained.
 
 ## Consequences
 
