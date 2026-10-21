@@ -4,7 +4,7 @@
 
 個人用の Python ツールボックス。コアはライブラリと CLI で、Web GUI は隣に置く予定である。所有者以外の Issue と Pull Request は受け付けない。
 
-仕様は草案である: [docs/design.ja.md](docs/design.ja.md)。design Issue が契約だと書くまで、契約ではない。作業の列は [docs/roadmap.md](docs/roadmap.md) にある。
+仕様は所有者の草案である: [docs/design.ja.md](docs/design.ja.md)。作業の列は [docs/roadmap.md](docs/roadmap.md) にある。
 
 ## Develop
 

@@ -1,97 +1,205 @@
-# pytoolbox と pytoolbox-gui
+# `pytoolbox` & `pytoolbox-gui` プロジェクト設計・仕様書 (改訂版)
 
 ## 1. プロジェクト概要
 
 ### 1.1 コンセプト
-
 エンジニアの日常を支える **「PC運用管理」** と **「開発ユーティリティ（DevToys互換）」** を1つの基盤に集約したスイスアーミーナイフ型ツールボックス。
 コアエンジン `pytoolbox`（CLI・Pythonライブラリ）と、Web GUIラッパー `pytoolbox-gui`（ブラウザUI）で構成する。
 
 ### 1.2 実装言語の方針
+* **原則 Python 優先**:
+  移植性、テストのしやすさ、型安全性を考慮し、機能は原則Pythonで実装する。
+* **ネイティブシェル（Bash / PowerShell）の限定利用**:
+  OS固有の低レイヤー操作、複雑なパイプライン処理、環境変数の一括適用など、Pythonでは実装が煩雑になる領域にのみシェルスクリプトを併用する。
 
-- **原則 Python 優先**: 移植性、テストのしやすさ、型安全性を考慮し、機能は原則 Python で実装する。
-- **ネイティブシェル（Bash / PowerShell）の限定利用**: OS固有の低レイヤー操作、複雑なパイプライン処理、環境変数の一括適用など、Python では実装が煩雑になる領域にのみシェルスクリプトを併用する。
+---
 
-## 2. 実行パス
+## 2. 全体アーキテクチャ
 
-ツールは操作の形で3つに分かれる。コアの関数は CLI と GUI の両方から呼ぶ。
+ツールは性質に応じて **「即時処理（DevTools系）」** と **「プロセス実行（SystemTools系）」** の2つの実行パスを持つ。
 
 ```text
-[ 操作 ]
-   ├── 即時     入力を受け取り、結果を返す
-   ├── バッチ   ファイルを読む・書く、または走査する。進捗を返してよい
-   └── セッション  開始と停止があり、ログを流し続ける
+[ ユーザー操作 ]
+   │
+   ├──▶ ① CLI直接実行 : pytoolbox run / pytoolbox util
+   │
+   └──▶ ② Web ブラウザ : pytoolbox-gui (DevToys風UI)
+              │
+              ▼ (pytoolbox コア)
+       ┌────────────────────────────────────────────────────────┐
+       │ 【パス A】Developer Tools (DevToys系)                  │
+       │  ・JSON/YAML整形, Base64, UUID生成, ハッシュ計算等       │
+       │  ・Pythonインプロセスで超高速実行（入力即レスポンス）    │
+       └────────────────────────────────────────────────────────┘
+       ┌────────────────────────────────────────────────────────┐
+       │ 【パス B】System Tools (管理・運用系)                   │
+       │  ・キャッシュ掃除, 環境構築, ポート調査, ネットワーク修復 │
+       │  ・Subprocess実行 (Python / Shell / PowerShell)        │
+       │  ・SSEリアルタイムログ配信 ＋ 排他ロック ＋ 履歴DB     │
+       └────────────────────────────────────────────────────────┘
 ```
 
-GUI はローカルの Web アプリである。FastAPI が API を出し、Jinja2 が HTML を出し、HTMX と Tailwind で画面を組む。待たない処理は通常のリクエストで返す。バッチの進捗とセッションのログは、そのツールを作る Issue が配信方法を決める。全ツールに SSE、排他ロック、SQLite 履歴を先に付けない。
+---
 
-## 3. リポジトリ
-
-uv のワークスペース。公開しないルートと、コアのパッケージを置く。GUI パッケージは、それを作る Issue で足す。
+## 3. ディレクトリ構成 (`uv` Monorepo)
 
 ```text
 pytoolbox/
-├── pyproject.toml
-├── justfile
+├── pyproject.toml                 # ワークスペース定義
+├── Justfile                       # 開発タスクランナー
+├── README.md
+│
 ├── packages/
-│   └── pytoolbox/          コア。ツールのモジュールは、そのツールの Issue で足す
-└── packages/pytoolbox-gui/ GUI。未作成
+│   ├── pytoolbox/                 # 【コア & CLI】
+│   │   ├── pyproject.toml
+│   │   └── src/pytoolbox/
+│   │       ├── cli.py             # CLIエントリポイント
+│   │       ├── runner.py          # システムタスク用実行エンジン (Subprocess)
+│   │       ├── db.py              # SQLite履歴保存
+│   │       └── tools/             # 組み込みツール群
+│   │           ├── dev/           # 【DevTools系】Pythonインプロセス関数
+│   │           │   ├── encoders.py (Base64, URL, JWT)
+│   │           │   ├── formatters.py (JSON, YAML, SQL)
+│   │           │   └── generators.py (UUID, パスワード, Hash)
+│   │           └── system/        # 【SystemTools系】Python実装の管理タスク
+│   │               ├── cleanup.py
+│   │               └── sysinfo.py
+│   │
+│   └── pytoolbox-gui/             # 【Web GUI】
+│       ├── pyproject.toml
+│       └── src/pytoolbox_gui/
+│           ├── cli.py             # `pytoolbox-gui` 起動コマンド
+│           ├── server.py          # FastAPI / APIルーティング
+│           ├── sse.py             # リアルタイムログ配信
+│           └── templates/         # HTML (Jinja2 + HTMX + Tailwind)
+│
+└── native-scripts/                # 【ネイティブシェル専用領域】
+    ├── mac/                       # macOS専用 (.sh, AppleScript)
+    ├── win/                       # Windows専用 (.ps1)
+    └── common/                    # 共通 (.sh)
 ```
 
-開発のゲートと規約は `docs/conventions.md` と `AGENTS.md`。
+---
 
-## 4. 実装の規則
+## 4. 2系統のツール設計規約
 
-型、エラー、ファイル、テスト、CLI の決めは `docs/conventions.md` と `docs/adr/0005-library-contracts.md`。ここには実装が従う形だけを書く。型のモジュールは、最初のツールの変更で作る。
+### 4.1 Developer Tools (DevToys系)
+* **実装方式**: 純粋なPython関数（引数を受け取って加工文字列を返す純粋関数）。
+* **UI表現**: 左右（または上下）分割のテキストエリア。「左に入力した瞬間に右へ整形・変換結果が出る」DevToys仕様。
+* **実装例**:
+  ```python
+  # packages/pytoolbox/src/pytoolbox/tools/dev/formatters.py
+  import json
 
-- 未知の型は pyright が落とす。`Any` と `type: ignore` は、その行に理由があるときだけ。
-- 中断する失敗は `InputError` か `OperationError`。メッセージは英語。項目ごとの失敗は続け、`BatchResult` に載せる。出力先が作れないときは何も書かず `OperationError`。
-- 長い処理は `Progress` を順に返し、最後に `BatchResult` を返す。コールバックと logging は使わない。中断は `cancel` を項目のあいだで見る。
-- リンクは追わない。書き先は指定ディレクトリの中だけ。テキストは UTF-8。Excel 向け CSV だけ BOM。既存パスは上書きしない（`--overwrite`）。`--dry-run` は書かない。`cache-clean` の既定はこれと同じで、消すのは `--apply` だけである。
-- 単体テストはネットワークを開かない。ファイルは一時ディレクトリ。
-- CLI は argparse。終了コードは 0、入力エラー 1、実行エラー 2。
+  def format_json(text: str, indent: int = 2, sort_keys: bool = False) -> str:
+      """JSON文字列を整形する"""
+      data = json.loads(text)
+      return json.dumps(data, indent=indent, sort_keys=sort_keys, ensure_ascii=False)
+  ```
 
-## 5. GUI
+### 4.2 System Tools (PC管理系)
+* **実装方式**: Pythonスクリプト、または `native-scripts/` 配下のシェルスクリプト。
+* **安全基準**:
+  * 破壊的操作を含む場合は `--dry-run` オプションを必須とする。
+  * コマンドインジェクション防止のため `shell=True` は使用禁止。
+* **UI表現**: 引数入力フォーム（オプション指定） ＋ 実行ボタン ＋ リアルタイム黒画面コンソール（SSE）。
 
-左にツール、右にそのツールの画面。カテゴリは §9 の見出しに合わせる。
+---
 
-- 即時の画面は、入力と結果を同じ画面に置く。
-- バッチの画面は、引数、実行、結果または進捗を置く。
-- セッションの画面は、開始、停止、ログを置く。
-- 画像クリップは、範囲を選ぶプレビューのあと、バッチとしてフォルダへ適用する。コアへ渡す矩形は画像のピクセル座標で、画像の範囲へ丸める。
+## 5. Web GUI (`pytoolbox-gui`) の設計
 
-## 6. CLI
+DevToysライクなレイアウトを採用し、左サイドバーで全ツールをシームレスに切り替えます。
 
+### 5.1 サイドバーのカテゴリ構造
 ```text
-pytoolbox <command> [args]
-pytoolbox gui
+▼ Developer Utilities
+  ├─ Encoders / Decoders (Base64, URL, JWT)
+  ├─ Formatters (JSON, YAML)
+  ├─ Generators (UUID, Hash, Password)
+  └─ Text (Diff, 正規表現テスター)
+
+▼ System Operations
+  ├─ Cleanup (キャッシュ削除, 一時ファイル掃除)
+  ├─ Network (ポート調査, Wi-Fiリセット, 疎通確認)
+  └─ Setup (開発環境キッティング, パッケージ更新)
+
+▼ Logs & History
+  └─ 過去の実行履歴 (SQLite)
 ```
 
-`gui` は `127.0.0.1:8000` で待つ。コマンド名は次のとおり。
+### 5.2 処理フローの違い（FastAPI実装）
+* **Dev系（即時API）**:
+  通常のリクエスト/レスポンス。高速に動作するため待機なし。
+  `POST /api/dev/format-json` ──▶ 即座に整形結果のJSON/テキストを返却。
+* **System系（SSEストリーミングAPI）**:
+  重い処理・OS操作。
+  `GET /api/system/run/clean-disk?dry_run=true` ──▶ **Server-Sent Events (SSE)** でターミナル出力をリアルタイム配信。
 
-`text-count`、`regex`、`resx-compare`、`hardcoding`、`ping`、`port`、`folder-size`、`csv-gen`、`json-gen`、`mock-image`、`file-copy`、`folder-copy`、`pdf-split`、`file-merge`、`image-clip`、`udp`、`cache-clean`。
+---
 
-`csv-gen`、`json-gen`、`mock-image` は種を任意で受ける。省略すると結果は実行ごとに変わる。
+## 6. CLI インターフェース設計 (`pytoolbox`)
 
-`cache-clean` は名前を一つ以上、引数で渡す。名前が無い、または未知の名前は `InputError` で、何も走査しない。引数に書いた名前だけを扱う。既定と `--dry-run` は、消す予定のパスとバイト数を出す。`--apply` のときだけ消す。
+CLIからもすべての機能に直感的にアクセスできます。
 
-## 7. 配布
+```bash
+# 1. 一覧表示
+pytoolbox list
 
-コアだけ、または GUI 込みを、uv の tool install で入れる。GUI は `127.0.0.1:8000` で待ち、ブラウザを開く。
+# 2. System系ツールの実行 (ログを標準出力に流す)
+pytoolbox run clean-disk --dry-run
 
-ライセンスは MIT（`LICENSE`）。
+# 3. ネイティブシェルの実行 (native-scripts配下のものを指定)
+pytoolbox run native:win/fix-network.ps1
 
-## 8. 実装順
+# 4. Dev系ユーティリティの利用 (パイプ連携対応)
+cat data.json | pytoolbox util json-format
+pytoolbox util uuid --count 5
 
-実装順は `docs/roadmap.md`。現在の行は M1-1。§9 の並びは優先度ではない。
+# 5. GUIの起動
+pytoolbox gui   # pytoolbox-gui を立ち上げてブラウザを開く
+```
 
-## 9. ツール一覧
+---
+
+## 7. 配布・導入手順
+
+### 7.1 基本セットアップ (`uv` 利用)
+```bash
+# CLIのみ使用する場合
+uv tool install ./packages/pytoolbox
+
+# Web GUIを含むフル機能を使用する場合
+uv tool install ./packages/pytoolbox-gui
+```
+
+### 7.2 起動
+* **CLI**: そのまま `pytoolbox` コマンドを使用。
+* **GUI**: ターミナルで `pytoolbox-gui` と打つと、ローカルWebサーバー（`127.0.0.1:8000`）が立ち上がり、ブラウザが自動的に開く。
+
+---
+
+## 8. 実装ロードマップ
+
+* [ ] **Phase 1: コア構造とDevToolsの先行実装**
+  * `uv` モノレポ構成の作成。
+  * `pytoolbox` 内にDevTools系（JSON整形、Base64、UUID生成）のPython関数を実装し、CLIから呼び出せるようにする。
+* [ ] **Phase 2: システム実行エンジン (Runner) の実装**
+  * Subprocessの非同期実行、引数の配列渡しバリデーション、排他制御。
+  * `scripts/` 配下のスクリプト自動検出機能。
+* [ ] **Phase 3: Web GUI (`pytoolbox-gui`) の構築**
+  * FastAPI + HTMX + Tailwind CSS でDevToys風の2ペイン画面を作成。
+  * Dev系（即時反映）とSystem系（SSEコンソール）のUIを統合。
+* [ ] **Phase 4: 履歴保存とOS常駐化**
+  * SQLiteによる実行履歴保存画面の作成。
+  * PCログイン時のバックグラウンド常駐スクリプトの用意。
+
+---
+
+## 9. 初期ツール一覧
 
 初期で作るツールの一覧である。出典は手元の6つ。PyDevToys が eel で大半を既にまとめており、FolderSizer だけがそこへ入っていない。設定画面はチェックボックスだけで動作が無いので、一覧に入れない。
 
-出典の違いは次のとおり決めた。
-
-### 9.1 即時
+出典の違いは「決定」の列のとおり決めた。型、エラー、ファイル、テスト、終了コードの決めは `docs/conventions.md` にある。ライセンスは MIT（`LICENSE`）。
 
 | ツール | すること | 出典 | 決定 |
 | --- | --- | --- | --- |
@@ -99,12 +207,7 @@ pytoolbox gui
 | 正規表現 | パターンと文字列を照合する。フラグは g / i / m | PyDevToys の画面だけ。ブラウザ内で実行している | `i` は `IGNORECASE`、`m` は `MULTILINE`、`g` は全一致。`g` が無ければ最初の一致 |
 | リソース比較 | 2つの `.resx` の `data` 名を比べ、一致・不一致・片方のみを返す | PyDevToys | 無し |
 | ハードコーディング検出 | ディレクトリを拡張子で歩き、文字列、4桁以上の数値、IP、URL、メールを行番号付きで返す。コメント行は飛ばす | PyDevToys | 無し |
-| 疎通確認 | `ping` を1回送る。TCP ポートへ接続し、開閉と応答時間を返す | PyDevToys。引数は配列渡し | コマンドは `ping` と `port` |
-
-### 9.2 バッチ
-
-| ツール | すること | 出典 | 決定 |
-| --- | --- | --- | --- |
+| 疎通確認 | `ping` を1回送る。TCP ポートへ接続し、開閉と応答時間を返す | PyDevToys。引数は配列渡し | 無し |
 | フォルダサイズ | 直下のファイルとフォルダを大きい順に出す。フォルダは中身の合計。リンクとジャンクションは追わない。読めない項目は件数だけ報告する。`--top` は表示件数、CSV は全件、UTF-8 BOM | FolderSizer。PyDevToys には無い | 無し |
 | CSV 生成 | 列の型（text, number, boolean, date）と行数から CSV を書く | PyDevToys | 種は任意。Excel 向けなので BOM 付き |
 | JSON 生成 | プロパティ定義と件数から JSON を書く。型は string, number, boolean, date, email, uuid, url, ip, path, array, object, date_range, custom_list | PyDevToys | 種は任意 |
@@ -113,11 +216,6 @@ pytoolbox gui
 | フォルダコピー | フォルダを、名前と番号の書式で複数コピーする | PyDevToys | 無し |
 | PDF 分割 | PDF を1ページずつ `page_N.pdf` として書く | PDFDivider と PyDevToys | 無し |
 | ファイル結合 | 選んだテキストを、区切り付きで1つの `.txt` に書く。読めないファイルはその旨を書く | FileMergerGUI と PyDevToys | 名前は `merged_YYYYMMDD_HHMMSS.txt` |
-| 画像クリップ | フォルダ内の jpg, jpeg, png, bmp, gif を、指定した矩形で切り、`cropped_` を付けて書く。元フォルダへ書く選択がある。JPEG 品質 95 | PyImageCripper と PyDevToys | 矩形は画像のピクセル座標。画像の外は丸める |
-| キャッシュ掃除 | 引数で指定した名前のキャッシュだけを消し、ストレージを空ける | 手元の6ツールには無い | 名前は `temp`、`pip`、`uv`、`npm`、`nuget`、`cargo`。`temp` は `%LOCALAPPDATA%\Temp` で、最終更新から 24 時間未満は残す。使用中で消せないファイルは失敗として数え、残りは続ける。`pip` は `%LOCALAPPDATA%\pip\Cache`、`uv` は `%LOCALAPPDATA%\uv\cache`、`npm` は `%LOCALAPPDATA%\npm-cache`、`nuget` は `%USERPROFILE%\.nuget\packages`、`cargo` は `%USERPROFILE%\.cargo\registry`。これらは中身を全部消す。ディレクトリ自体は残す。リンクは追わない。ルートが無いときは成功。GUI も同じ契約 |
-
-### 9.3 セッション
-
-| ツール | すること | 出典 | 決定 |
-| --- | --- | --- | --- |
-| UDP 受信 | 指定したアドレスで UDP を待ち、届いたデータグラムをログする。開始と停止がある | UDPListener と PyDevToys | 既定は `127.0.0.1:9000`。長さ、16進、UTF-8 で読めた文字列をログする |
+| 画像クリップ | プレビューで範囲を選び、フォルダ内の jpg, jpeg, png, bmp, gif を、その矩形で切り、`cropped_` を付けて書く。元フォルダへ書く選択がある。JPEG 品質 95 | PyImageCripper と PyDevToys | 矩形は画像のピクセル座標。画像の外は丸める |
+| キャッシュ掃除 | 引数で指定した名前のキャッシュだけを消し、ストレージを空ける | 手元の6ツールには無い | 名前は `temp`、`pip`、`uv`、`npm`、`nuget`、`cargo`。名前が無い、または未知の名前は `InputError` で、何も走査しない。既定と `--dry-run` は消す予定のパスとバイト数を出す。`--apply` のときだけ消す。`temp` は `%LOCALAPPDATA%\Temp` で、最終更新から 24 時間未満は残す。使用中で消せないファイルは失敗として数え、残りは続ける。`pip` は `%LOCALAPPDATA%\pip\Cache`、`uv` は `%LOCALAPPDATA%\uv\cache`、`npm` は `%LOCALAPPDATA%\npm-cache`、`nuget` は `%USERPROFILE%\.nuget\packages`、`cargo` は `%USERPROFILE%\.cargo\registry`。これらは中身を全部消す。ディレクトリ自体は残す。リンクは追わない。ルートが無いときは成功。GUI も同じ契約 |
+| UDP 受信 | `0.0.0.0` で UDP を待ち、届いたデータグラムをログする。開始と停止がある | UDPListener と PyDevToys | ポートの既定は 9000 で、指定で変えられる。長さ、16進、UTF-8 で読めた文字列をログする |
