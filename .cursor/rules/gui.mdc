@@ -1,0 +1,21 @@
+---
+description: Settle a screen's look in the spec before building it, and check every GUI change in a browser
+alwaysApply: true
+---
+
+# GUI
+
+Before building a screen, read `docs/design.ja.md` §5. If it does not say how the screen looks, settle the look in a Grill and write it into §5 first.
+
+A PR that changes the GUI is opened in a browser before it is called ready. Take screenshots, and list what was checked under `## Test plan`: each screen, each interaction, and both the light and the dark theme. A preview with fake tools runs on a port other than `8000`. Its script is removed in the same turn.
+
+```text
+# BAD
+Agent: builds the shell from "DevToys-like", opens the PR, and never loads the page
+Owner: shows screenshots of DevToys; the shell is rebuilt
+
+# GOOD
+Agent: sees that §5 names no theme, search, or home page, and asks in a Grill
+Agent: builds it, loads it with fake tools on port 8001, screenshots home, search,
+       collapse, and both themes, writes that in the Test plan, and deletes the script
+```
