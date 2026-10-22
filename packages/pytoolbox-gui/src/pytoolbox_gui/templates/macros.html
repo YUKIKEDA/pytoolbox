@@ -1,0 +1,8 @@
+{% macro icon(name) -%}
+<span class="icon" style="--icon: url('/static/icons/ic_fluent_{{ name }}_20_regular.svg')" aria-hidden="true"></span>
+{%- endmacro %}
+
+{% macro tool_link(screen, class) -%}
+<a class="{{ class }}" href="/tools/{{ screen.tool.name }}" hx-get="/tools/{{ screen.tool.name }}"
+   hx-target="#pane" hx-push-url="true" title="{{ screen.tool.summary }}">{{ caller() }}</a>
+{%- endmacro %}

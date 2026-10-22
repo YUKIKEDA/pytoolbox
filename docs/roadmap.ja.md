@@ -8,12 +8,12 @@
 
 ## Current work
 
-M1-1。
+M2-1。
 
 | ID | Title | Issue | Status |
 | --- | --- | --- | --- |
-| M1-1 | Add the foundation: error and result types, tool list, GUI shell | #12 | Next |
-| M2-1 | Add text-count | #3 | Not started |
+| M1-1 | Add the foundation: error and result types, tool list, GUI shell | #12 | Done |
+| M2-1 | Add text-count | #3 | Next |
 | M2-2 | Add regex | | Not started |
 | M2-3 | Add resx-compare | | Not started |
 | M2-4 | Add hardcoding | | Not started |

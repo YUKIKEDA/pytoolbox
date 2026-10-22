@@ -5,6 +5,9 @@ description = "Core library for the pytoolbox CLI."
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+pytoolbox = "pytoolbox.cli:run"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

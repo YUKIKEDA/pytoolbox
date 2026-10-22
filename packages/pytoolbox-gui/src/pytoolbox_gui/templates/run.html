@@ -1,0 +1,6 @@
+<section class="run" sse-connect="/runs/{{ run_id }}/events" sse-close="done">
+  <div class="run-progress" sse-swap="progress"></div>
+  <pre class="console" sse-swap="log" hx-swap="beforeend"></pre>
+  <div class="run-result" sse-swap="result,error"></div>
+  <button type="button" class="run-cancel" hx-post="/runs/{{ run_id }}/cancel" hx-swap="none">Cancel</button>
+</section>
