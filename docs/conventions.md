@@ -11,12 +11,13 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/cli.py       `pytoolbox` command: list, gui, one subcommand per tool
   src/pytoolbox/errors.py    PytoolboxError, InputError, OperationError
   src/pytoolbox/results.py   Progress, ItemFailure, BatchResult, LogEvent, Cancel
-  src/pytoolbox/registry.py  Tool, System, TOOLS
+  src/pytoolbox/registry.py  Tool, System, TOOLS, one constant per tool
+  src/pytoolbox/tools/dev/   Developer Utilities, pure functions (text.py: text-count)
 packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
   src/pytoolbox_gui/server.py   create_app(): routes, Host and Origin guard, errors
   src/pytoolbox_gui/sse.py      Run, Runs, SSE encoding
-  src/pytoolbox_gui/screens.py  Screen, Fragment, SCREENS, search matching
+  src/pytoolbox_gui/screens.py  Screen, Fragment, SCREENS, search matching, each tool's form handler
   src/pytoolbox_gui/templates/  shell, pane, and event fragments
   src/pytoolbox_gui/static/     app.css, htmx, the SSE extension, icons/ with its LICENSE
 packages/<name>/tests/  tests for that package
@@ -155,7 +156,11 @@ A test never starts the real GUI server: `pytoolbox gui` tests replace `serve`, 
 
 argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/design.ja.md` §6). `pytoolbox list` prints each tool with its system and category (§5.1). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000` (§7.2).
 
-A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Errors print `error: <message>` to stderr. Each subcommand names its handler with `set_defaults(handler=...)`, and `main` calls it; there is no fallback command.
+A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Errors print `error: <message>` to stderr. Each subcommand names its handler with `set_defaults(handler=...)`, and `main` calls it with the parsed arguments; there is no fallback command. A subcommand's name and help come from the tool's constant in `registry`.
+
+A text tool takes its text as an optional argument. Without it, the tool reads standard input as UTF-8 bytes, drops a leading BOM, and counts the rest as given, line breaks included. Input that is not UTF-8 is `InputError`. An empty argument is empty text, not a request to read standard input.
+
+`pytoolbox text-count` prints `total`, `non-space`, and `half-width`, one per line, each label padded to the longest and followed by two spaces and the number.
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
@@ -178,6 +183,8 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 
 - Paths use the tool's CLI name. No system prefix and no `/api`.
 - `GET` never runs a tool or changes state; browsers prefetch and follow links. Every run is `POST`, even for a read-only tool.
+- A Developer Utilities screen posts its input on every `input` event with `hx-sync="this:replace"`, so a request still in flight is replaced and the last keystroke always wins; htmx's default `drop` would discard it. The search box uses the same `hx-sync`. Source: [htmx hx-sync](https://htmx.org/attributes/hx-sync/).
+- A browser submits a textarea's line breaks as CRLF. The handler reads text fields with `screens.text_field`, which turns them back into LF, so a tool counts what the box shows. Source: [HTML: converting an entry list to a list of name-value pairs](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#converting-an-entry-list-to-a-list-of-name-value-pairs).
 - Form fields carry the CLI options in `snake_case` (`--dry-run` is `dry_run`) and are form-encoded, the HTMX default. The handler calls the same library function as the CLI. Paths are typed as text; the server reads the local disk, so there is no upload.
 - An unknown tool on `GET` returns `404`. A `POST` to the endpoint of the other kind (`/tools/<tool>` for a streaming tool, or the reverse) is `InputError`.
 - `InputError` returns `422` and `OperationError` returns `500`, each with an error fragment. Any other exception returns `500` with a generic message and is logged. The shell page sets `htmx-config` `responseHandling` so `422` and `500` swap into the error area; HTMX does not swap `4xx` and `5xx` by default.

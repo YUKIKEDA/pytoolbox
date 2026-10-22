@@ -1,0 +1,16 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<div class="split">
+  <section class="split-side">
+    <h2><label for="text-count-input">Text</label></h2>
+    <textarea id="text-count-input" name="text" spellcheck="false" autofocus
+              hx-post="/tools/text-count" hx-trigger="input" hx-sync="this:replace"
+              hx-target="#text-count-result"></textarea>
+  </section>
+  <section class="split-side">
+    <h2>Counts</h2>
+    <div id="text-count-result" aria-live="polite">{% include "tools/text-count-result.html" %}</div>
+  </section>
+</div>

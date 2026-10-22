@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import System, Tool
 from pytoolbox.results import BatchResult, Cancel, ItemFailure, LogEvent, Progress
@@ -76,6 +77,7 @@ def test_home_is_the_shell_with_the_sidebar(client: TestClient) -> None:
     assert 'href="/tools/echo"' in html
     assert 'href="/tools/batch"' in html
     assert 'hx-get="/search"' in html
+    assert 'hx-sync="this:replace"' in html
     assert 'id="sidebar-collapsed"' in html
 
 
@@ -299,9 +301,12 @@ def test_static_assets_are_served(client: TestClient) -> None:
         assert client.get(f"/static/{name}").status_code == 200
 
 
-def test_the_default_app_has_no_tools() -> None:
+def test_the_default_app_opens_every_registered_tool() -> None:
     with TestClient(create_app(), base_url="http://127.0.0.1:8000") as test:
-        assert "No tools yet." in test.get("/").text
+        home = test.get("/").text
+        for tool in registry.TOOLS:
+            assert f'href="/tools/{tool.name}"' in home
+            assert test.get(f"/tools/{tool.name}").status_code == 200
 
 
 def test_a_tool_without_a_screen_is_refused() -> None:

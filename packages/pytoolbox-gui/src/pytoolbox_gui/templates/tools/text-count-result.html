@@ -1,0 +1,5 @@
+<dl class="counts">
+  <div><dt>Characters</dt><dd>{{ count.total if count is defined else 0 }}</dd></div>
+  <div><dt>Not white space</dt><dd>{{ count.non_space if count is defined else 0 }}</dd></div>
+  <div><dt>Half-width</dt><dd>{{ count.half_width if count is defined else 0 }}</dd></div>
+</dl>
