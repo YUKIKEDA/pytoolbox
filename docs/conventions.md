@@ -109,6 +109,8 @@ English, Google style. The summary is one line and ends with a period. Add `Args
 
 pyright stays in `standard` mode, and these are errors: unknown parameter, argument, lambda, variable, and member types, and a `type: ignore` that suppresses nothing. A public function annotates every parameter and the return. Use `X | None`, `list[str]`, and `dict[str, int]`. `Any` is only for a boundary with an untyped object, and the line says which one. A `type: ignore` names one code and the reason. Do not disable a check for a whole file.
 
+`multiprocessing.Pipe` on Windows returns `PipeConnection`, which is not a `Connection`. The type of one end is a Protocol with `send`, `recv`, `poll`, and `close`. `recv` returns `Any`; the line says it is an unpickled object from the other process.
+
 ### Errors
 
 Hard failures raise. `InputError` is a bad argument or a missing path. `OperationError` is a failure while doing the work. Both subclass `PytoolboxError`. Messages are English.
