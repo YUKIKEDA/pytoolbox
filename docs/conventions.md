@@ -136,6 +136,13 @@ Only batch `Progress` and UDP `LogEvent` stream. The CLI writes one line per val
 
 Only the runner starts a process: an external command or a script under `native-scripts/`. It takes an argument list, never a shell string. A script is a tool's implementation. No CLI command or GUI screen runs a script by name or path. On `cancel`, the runner terminates the child and returns with `cancelled=True`. A Python tool runs in process.
 
+One exception: regular expressions are matched in a worker process, not in process and not through the runner. A `re` match runs in C and checks neither `cancel` nor Ctrl+C, and a thread stuck in one cannot be stopped, so a pattern such as `(a+)+$` would hold a CPU until the process exits. The worker is a `multiprocessing` process.
+
+- The GUI keeps one worker for its next match. A match that takes more than 1 second is `OperationError` ("timed out"); the GUI terminates the worker and starts a new one for the next match.
+- The CLI starts a worker for its one match and waits with no limit. On Ctrl+C it terminates the worker and exits `130`.
+
+Recorded in [ADR 0010](adr/0010-regex-worker.md).
+
 ### Files
 
 - Take and return `pathlib.Path`. Do not follow symlinks or junctions.
@@ -156,7 +163,7 @@ A test never starts the real GUI server: `pytoolbox gui` tests replace `serve`, 
 
 argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/design.ja.md` §6). `pytoolbox list` prints each tool with its system and category (§5.1). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000` (§7.2).
 
-A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Errors print `error: <message>` to stderr. Each subcommand names its handler with `set_defaults(handler=...)`, and `main` calls it with the parsed arguments; there is no fallback command. A subcommand's name and help come from the tool's constant in `registry`.
+A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Ctrl+C exits `130` (128 plus `SIGINT`) with no traceback. Errors print `error: <message>` to stderr. Each subcommand names its handler with `set_defaults(handler=...)`, and `main` calls it with the parsed arguments; there is no fallback command. A subcommand's name and help come from the tool's constant in `registry`.
 
 A text tool takes its text as an optional argument. Without it, the tool reads standard input as UTF-8 bytes, drops a leading BOM, and counts the rest as given, line breaks included. Input that is not UTF-8 is `InputError`. An empty argument is empty text, not a request to read standard input.
 
