@@ -16,9 +16,9 @@ packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
   src/pytoolbox_gui/server.py   create_app(): routes, Host and Origin guard, errors
   src/pytoolbox_gui/sse.py      Run, Runs, SSE encoding
-  src/pytoolbox_gui/screens.py  Screen, Fragment, SCREENS
+  src/pytoolbox_gui/screens.py  Screen, Fragment, SCREENS, search matching
   src/pytoolbox_gui/templates/  shell, pane, and event fragments
-  src/pytoolbox_gui/static/     app.css, htmx, the SSE extension
+  src/pytoolbox_gui/static/     app.css, htmx, the SSE extension, icons/ with its LICENSE
 packages/<name>/tests/  tests for that package
 docs/design.ja.md       the owner's draft spec, Japanese
 docs/roadmap.md         ID, title, Issue, status
@@ -29,7 +29,7 @@ native-scripts/         created with the Issue that adds a shell script
 
 Do not add an empty module, recipe, or script ahead of the Issue that needs it.
 
-A tool row adds one `Tool` to `registry.TOOLS` and one `Screen` to `screens.SCREENS`, in the same PR. `create_app` refuses a tool without a screen and a screen without a tool, so the CLI and the GUI cannot drift apart.
+A tool row adds one `Tool` to `registry.TOOLS` and one `Screen` to `screens.SCREENS`, in the same PR. `create_app` refuses a tool without a screen and a screen without a tool, so the CLI and the GUI cannot drift apart. It also refuses a screen whose icon is not under `static/icons/`, so the row copies its icon in the same PR.
 
 A row that adds a module adds its line to this file in the same PR.
 
@@ -187,7 +187,7 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 - HTMX and its SSE extension ship under `static/` at pinned versions, with the version in the file name (`htmx-2.0.11.min.js`, `htmx-ext-sse-2.2.4.min.js`). A new version is a new file whose SHA-384 matches the integrity value in the htmx docs. No CDN: the GUI has tools for a broken network, and it must load without one. Nothing in the frontend is built.
 - The CSS is one hand-written file, `static/app.css`, in plain CSS: custom properties for colors and spacing, grid for the layout, nesting where it helps. No CSS framework and no utility classes. Class names describe the part (`sidebar`, `pane`, `console`), not the look.
 - The look follows `docs/design.ja.md` §5: the OS light or dark setting through `light-dark()`, a sidebar that collapses to its icons, and cards on the home page.
-- Search matches `q` against each tool's name and summary, case-insensitive, as a substring. An empty `q` returns every tool. The search box sends it with `hx-get` on `input changed delay:200ms, keyup[key=='Enter']`, so typing sends one request per pause and no script is written by hand. Search is a `GET` because it runs nothing. Source: [htmx Active Search](https://htmx.org/examples/active-search/).
+- Search matches `q` against each tool's name and summary, case-insensitive, as a substring, with surrounding spaces ignored. An empty `q` returns every tool. The search box sends it with `hx-get` on `input changed delay:200ms, keyup[key=='Enter']`, so typing sends one request per pause and no script is written by hand. Search is a `GET` because it runs nothing. Source: [htmx Active Search](https://htmx.org/examples/active-search/).
 - Icons are SVG files from [Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons) (MIT), size 20, `regular`, copied to `static/icons/` under their upstream file names (`ic_fluent_home_20_regular.svg`) with the upstream `LICENSE` beside them. They come from commit `4c94ad5f4081168c0d45bdc368f230ecb757cd09`; a newer icon is copied from a named commit, and this line is updated. Only icons in use are copied. A tool's icon is `Screen.icon`, the name between `ic_fluent_` and `_20_regular`. CSS draws an icon as a `mask` filled with `currentColor`, so it follows the theme.
 - Tests use `TestClient` and send `Host` and `Origin` as a browser would. A test also checks each `403` case.
 

@@ -1,3 +1,4 @@
+{% from "macros.html" import icon, tool_link %}
 <!doctype html>
 <html lang="en">
   <head>
@@ -16,25 +17,46 @@
     <script src="/static/htmx-ext-sse-2.2.4.min.js"></script>
   </head>
   <body hx-ext="sse">
+    <input type="checkbox" id="sidebar-collapsed" class="sidebar-toggle">
     <nav class="sidebar">
-      <a class="sidebar-home" href="/" hx-get="/" hx-target="#pane" hx-push-url="true">pytoolbox</a>
+      <div class="sidebar-top">
+        <label for="sidebar-collapsed" class="sidebar-button" title="Collapse or expand the sidebar">
+          {{ icon("navigation") }}<span class="visually-hidden">Collapse or expand the sidebar</span>
+        </label>
+        <span class="sidebar-title">pytoolbox</span>
+      </div>
+      <label class="sidebar-search">
+        {{ icon("search") }}
+        <input type="search" name="q" value="{{ query | default('') }}" placeholder="Search tools"
+               aria-label="Search tools" autocomplete="off" hx-get="/search"
+               hx-trigger="input changed delay:200ms, keyup[key=='Enter']" hx-target="#pane">
+      </label>
+      <a class="sidebar-item sidebar-home" href="/" hx-get="/" hx-target="#pane" hx-push-url="true"
+         title="All tools">{{ icon("home") }}<span class="sidebar-text">All tools</span></a>
       {% for system, categories in sidebar.items() %}
-      <details class="sidebar-system" open>
-        <summary>{{ system }}</summary>
-        {% for category, tools in categories.items() %}
-        <p class="sidebar-category">{{ category }}</p>
-        <ul>
-          {% for tool in tools %}
-          <li>
-            <a href="/tools/{{ tool.name }}" hx-get="/tools/{{ tool.name }}" hx-target="#pane"
-               hx-push-url="true" title="{{ tool.summary }}">{{ tool.name }}</a>
-          </li>
-          {% endfor %}
-        </ul>
+      <details class="sidebar-group" open>
+        <summary class="sidebar-item">
+          <span class="sidebar-text">{{ system }}</span>{{ icon("chevron_down") }}
+        </summary>
+        {% for category, category_screens in categories.items() %}
+        <details class="sidebar-group sidebar-category" open>
+          <summary class="sidebar-item">
+            <span class="sidebar-text">{{ category }}</span>{{ icon("chevron_down") }}
+          </summary>
+          <ul>
+            {% for screen in category_screens %}
+            <li>
+              {% call tool_link(screen, "sidebar-item") %}
+              {{ icon(screen.icon) }}<span class="sidebar-text">{{ screen.tool.name }}</span>
+              {% endcall %}
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
         {% endfor %}
       </details>
       {% else %}
-      <p class="sidebar-empty">No tools yet.</p>
+      <p class="sidebar-empty sidebar-text">No tools yet.</p>
       {% endfor %}
     </nav>
     <main class="main">

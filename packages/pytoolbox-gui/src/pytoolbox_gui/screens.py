@@ -30,15 +30,32 @@ class Screen:
     Attributes:
         tool: The registry entry.
         template: The pane template, shown at `GET /tools/<tool>`.
+        icon: The Fluent icon name, between `ic_fluent_` and `_20_regular` in its file name
+            under `static/icons/`.
         run: For a tool that returns at once: takes the form, returns the result fragment.
         stream: For a streaming tool: takes the form, returns the stream to run.
     """
 
     tool: Tool
     template: str
+    icon: str
     run: Callable[[Form], Fragment] | None = None
     stream: Callable[[Form], Stream] | None = None
 
 
 SCREENS: tuple[Screen, ...] = ()
 """Every screen. A tool row adds its screen here with its registry entry."""
+
+
+def matches(tool: Tool, query: str) -> bool:
+    """Say whether a search query finds a tool.
+
+    Args:
+        tool: The tool.
+        query: The text typed into the search box. Empty text finds every tool.
+
+    Returns:
+        Whether the query is in the tool's name or summary, ignoring case.
+    """
+    needle = query.strip().casefold()
+    return needle in tool.name.casefold() or needle in tool.summary.casefold()

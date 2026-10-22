@@ -1,7 +1,7 @@
 """The FastAPI app: a hypermedia API that returns HTML for HTMX."""
 
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -15,16 +15,25 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescap
 
 from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
-from pytoolbox.registry import Tool
+from pytoolbox.registry import System, Tool
 from pytoolbox_gui import screens
-from pytoolbox_gui.screens import Form, Fragment, Screen
+from pytoolbox_gui.screens import Form, Fragment, Screen, matches
 from pytoolbox_gui.sse import Runs, event_name, format_event
 
 HOST = "127.0.0.1"
 PORT = 8000
 
 _PACKAGE = Path(__file__).parent
+_ICONS = _PACKAGE / "static" / "icons"
 _logger = logging.getLogger(__name__)
+
+type Sections = dict[System, dict[str, list[Screen]]]
+"""Screens by system, then by category, in sidebar order."""
+
+
+def _icon_shipped(icon: str) -> bool:
+    # The name pattern is also in templates/macros.html.
+    return (_ICONS / f"ic_fluent_{icon}_20_regular.svg").is_file()
 
 
 def _check_screens(tools: Sequence[Tool], all_screens: Sequence[Screen]) -> dict[str, Screen]:
@@ -40,7 +49,20 @@ def _check_screens(tools: Sequence[Tool], all_screens: Sequence[Screen]) -> dict
     if extra := sorted(by_name.keys() - tool_names):
         msg = f"Screens without a tool: {', '.join(extra)}"
         raise ValueError(msg)
+    if unknown := sorted(s.icon for s in all_screens if not _icon_shipped(s.icon)):
+        msg = f"Icons not in static/icons: {', '.join(unknown)}"
+        raise ValueError(msg)
     return by_name
+
+
+def _sections(tools: Sequence[Tool], by_name: Mapping[str, Screen]) -> Sections:
+    return {
+        system: {
+            category: [by_name[tool.name] for tool in category_tools]
+            for category, category_tools in categories.items()
+        }
+        for system, categories in registry.group(tools).items()
+    }
 
 
 def create_app(
@@ -65,7 +87,7 @@ def create_app(
         ValueError: A tool has no screen, a screen has no tool, or a name repeats.
     """
     by_name = _check_screens(tools, all_screens)
-    sidebar = registry.group(tools)
+    sidebar = _sections(tools, by_name)
     runs = Runs()
     hosts = {f"{HOST}:{port}", f"localhost:{port}"}
     origins = {f"http://{host}" for host in hosts}
@@ -128,7 +150,12 @@ def create_app(
 
     @app.get("/")
     async def home(request: Request) -> Response:
-        return page(request, "home.html")
+        return page(request, "home.html", sections=sidebar, query="")
+
+    @app.get("/search")
+    async def search(request: Request, q: str = "") -> Response:
+        found = _sections([tool for tool in tools if matches(tool, q)], by_name)
+        return page(request, "home.html", sections=found, query=q)
 
     @app.get("/tools/{name}")
     async def tool_page(request: Request, name: str) -> Response:

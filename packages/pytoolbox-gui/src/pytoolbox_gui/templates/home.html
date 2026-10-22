@@ -1,2 +1,22 @@
-<h1>pytoolbox</h1>
-<p>Pick a tool in the sidebar.</p>
+{% from "macros.html" import icon, tool_link %}
+<h1 class="home-title">{% if query %}Tools matching “{{ query }}”{% else %}All tools{% endif %}</h1>
+{% for system, categories in sections.items() %}
+<section class="home-section">
+  <h2>{{ system }}</h2>
+  <ul class="cards">
+    {% for category_screens in categories.values() %}
+    {% for screen in category_screens %}
+    <li>
+      {% call tool_link(screen, "card") %}
+      <span class="card-icon">{{ icon(screen.icon) }}</span>
+      <span class="card-name">{{ screen.tool.name }}</span>
+      <span class="card-summary">{{ screen.tool.summary }}</span>
+      {% endcall %}
+    </li>
+    {% endfor %}
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<p class="home-empty">{% if query %}No tools match.{% else %}No tools yet.{% endif %}</p>
+{% endfor %}

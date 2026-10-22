@@ -56,7 +56,10 @@ def templates(tmp_path: Path) -> Path:
 def client(templates: Path) -> Iterator[TestClient]:
     app = create_app(
         (ECHO, BATCH),
-        (Screen(ECHO, "echo.html", run=echo), Screen(BATCH, "batch.html", stream=batch)),
+        (
+            Screen(ECHO, "echo.html", "search", run=echo),
+            Screen(BATCH, "batch.html", "home", stream=batch),
+        ),
         template_dirs=(templates,),
     )
     with TestClient(app, base_url="http://127.0.0.1:8000", raise_server_exceptions=False) as test:
@@ -72,6 +75,50 @@ def test_home_is_the_shell_with_the_sidebar(client: TestClient) -> None:
     assert html.index("Developer Utilities") < html.index("System Operations")
     assert 'href="/tools/echo"' in html
     assert 'href="/tools/batch"' in html
+    assert 'hx-get="/search"' in html
+    assert 'id="sidebar-collapsed"' in html
+
+
+def test_home_shows_a_card_per_tool_with_its_icon_and_summary(client: TestClient) -> None:
+    pane = client.get("/", headers={"HX-Request": "true"}).text
+
+    assert "<nav" not in pane
+    assert pane.count('class="card"') == 2
+    assert "ic_fluent_search_20_regular.svg" in pane
+    assert "Echo the text." in pane
+    assert pane.index("Developer Utilities") < pane.index("System Operations")
+
+
+@pytest.mark.parametrize(
+    ("query", "found"), [("ECHO", ["echo"]), ("copy", ["batch"]), ("", ["echo", "batch"])]
+)
+def test_search_matches_name_and_summary_ignoring_case(
+    client: TestClient, query: str, found: list[str]
+) -> None:
+    pane = client.get("/search", params={"q": query}, headers={"HX-Request": "true"}).text
+
+    assert [name for name in ("echo", "batch") if f'href="/tools/{name}"' in pane] == found
+
+
+def test_search_without_a_match_says_so(client: TestClient) -> None:
+    pane = client.get("/search", params={"q": "<zzz>"}, headers={"HX-Request": "true"}).text
+
+    assert "No tools match." in pane
+    assert "&lt;zzz&gt;" in pane
+
+
+def test_search_without_htmx_is_the_shell_with_the_query_kept(client: TestClient) -> None:
+    html = client.get("/search", params={"q": "echo"}).text
+
+    assert "<nav" in html
+    assert 'value="echo"' in html
+
+
+def test_shell_icons_are_shipped_with_their_license(client: TestClient) -> None:
+    for name in ("home", "navigation", "search", "chevron_down"):
+        response = client.get(f"/static/icons/ic_fluent_{name}_20_regular.svg")
+        assert response.status_code == 200
+    assert "MIT License" in client.get("/static/icons/LICENSE").text
 
 
 def test_sidebar_says_there_are_no_tools_for_an_empty_registry(templates: Path) -> None:
@@ -202,7 +249,7 @@ def test_stopping_the_server_cancels_every_run(templates: Path) -> None:
         return stream
 
     app = create_app(
-        (BATCH,), (Screen(BATCH, "batch.html", stream=waiting),), template_dirs=(templates,)
+        (BATCH,), (Screen(BATCH, "batch.html", "home", stream=waiting),), template_dirs=(templates,)
     )
     with TestClient(app, base_url="http://127.0.0.1:8000") as test:
         test.post("/tools/batch/runs", headers=ORIGIN)
@@ -264,9 +311,14 @@ def test_a_tool_without_a_screen_is_refused() -> None:
 
 def test_a_screen_without_a_tool_is_refused() -> None:
     with pytest.raises(ValueError, match="Screens without a tool: echo"):
-        create_app((), (Screen(ECHO, "echo.html"),))
+        create_app((), (Screen(ECHO, "echo.html", "home"),))
 
 
 def test_two_screens_for_one_tool_are_refused() -> None:
     with pytest.raises(ValueError, match="Two screens share a tool name"):
-        create_app((ECHO,), (Screen(ECHO, "a.html"), Screen(ECHO, "b.html")))
+        create_app((ECHO,), (Screen(ECHO, "a.html", "home"), Screen(ECHO, "b.html", "home")))
+
+
+def test_a_screen_whose_icon_is_not_shipped_is_refused() -> None:
+    with pytest.raises(ValueError, match="Icons not in static/icons: no_such_icon"):
+        create_app((ECHO,), (Screen(ECHO, "echo.html", "no_such_icon"),))
