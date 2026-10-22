@@ -10,4 +10,13 @@ Remove, in the turn that made them: extra worktrees and checkouts, throwaway pac
 - The checkout that is already open is where edits go.
 - The only paths allowed to stay: `.venv/`, tool caches, and `.dev/` for the owner's local notes (ignored, not tracked).
 - A script that writes scratch stops at its first failed command (`$ErrorActionPreference = 'Stop'` in PowerShell) and names its targets by absolute path.
-- Long text for `gh` goes through a temporary UTF-8 file that is deleted after the call.
+- Long text for `gh` goes through a temporary UTF-8 file that is deleted after the call. Delete it only after the call has returned and the text it wrote reads back non-empty. Never delete it in the same batch of parallel calls.
+
+```text
+# BAD
+Agent: runs `gh issue edit 26 --body-file body.md` and `Remove-Item body.md` side by side
+Result: gh reads an empty file and the Issue body is wiped
+
+# GOOD
+Agent: runs `gh issue edit 26 --body-file body.md`, reads the body length back, then removes body.md
+```
