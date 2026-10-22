@@ -2,10 +2,24 @@
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 
-from pytoolbox.registry import TEXT_COUNT, Tool
+from pytoolbox.registry import REGEX, TEXT_COUNT, Tool
+from pytoolbox.tools.dev.regex import Match, match_pattern
 from pytoolbox.tools.dev.text import count_text
+from pytoolbox.worker import Worker
 from pytoolbox_gui.sse import Stream
+
+MATCH_TIMEOUT = 1.0
+"""Seconds the regex screen waits for one match (docs/design.ja.md §2)."""
+
+_regex_worker = Worker()
+
+
+def close_workers() -> None:
+    """Stop the regex worker process, if one is running."""
+    _regex_worker.close()
+
 
 type Form = Mapping[str, Sequence[str]]
 """Form fields by name. A field can repeat, so each maps to its values."""
@@ -61,12 +75,77 @@ def text_field(form: Form, name: str) -> str:
     return values[-1].replace("\r\n", "\n") if values else ""
 
 
+def checkbox(form: Form, name: str) -> bool:
+    """Say whether a checkbox is checked. A browser submits a checkbox only when it is."""
+    return name in form
+
+
 def run_text_count(form: Form) -> Fragment:
     """Count the `text` field for the `text-count` screen."""
     return Fragment("tools/text-count-result.html", {"count": count_text(text_field(form, "text"))})
 
 
+@dataclass(frozen=True)
+class Segment:
+    """A run of the text on the regex screen.
+
+    Attributes:
+        text: The characters.
+        match: The number, from 1, of the match the run is, or `None` outside every match.
+    """
+
+    text: str
+    match: int | None
+
+
+def highlight(text: str, matches: Sequence[Match]) -> tuple[Segment, ...]:
+    """Split a text into the runs inside and outside its matches.
+
+    Args:
+        text: The text that was searched.
+        matches: Its matches, in text order and not overlapping, as `re` returns them.
+
+    Returns:
+        The runs, in order. An empty match is an empty run in its place.
+    """
+    segments: list[Segment] = []
+    position = 0
+    for number, match in enumerate(matches, start=1):
+        if match.start > position:
+            segments.append(Segment(text[position : match.start], None))
+        segments.append(Segment(match.text, number))
+        position = match.end
+    if position < len(text):
+        segments.append(Segment(text[position:], None))
+    return tuple(segments)
+
+
+def run_regex(form: Form) -> Fragment:
+    """Match the `pattern` field against the `text` field for the `regex` screen.
+
+    The match runs in a worker process and stops after `MATCH_TIMEOUT` seconds.
+
+    Raises:
+        InputError: The pattern is not valid.
+        OperationError: The match timed out.
+    """
+    text = text_field(form, "text")
+    match = partial(
+        match_pattern,
+        text_field(form, "pattern"),
+        text,
+        all_matches=checkbox(form, "global"),
+        ignore_case=checkbox(form, "ignore_case"),
+        multiline=checkbox(form, "multiline"),
+    )
+    matches = _regex_worker.call(match, MATCH_TIMEOUT)
+    return Fragment(
+        "tools/regex-result.html", {"matches": matches, "segments": highlight(text, matches)}
+    )
+
+
 SCREENS: tuple[Screen, ...] = (
+    Screen(REGEX, "tools/regex.html", "text_asterisk", run=run_regex),
     Screen(TEXT_COUNT, "tools/text-count.html", "text_word_count", run=run_text_count),
 )
 """Every screen. A tool row adds its screen here with its registry entry."""

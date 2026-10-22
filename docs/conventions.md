@@ -12,7 +12,8 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/errors.py    PytoolboxError, InputError, OperationError
   src/pytoolbox/results.py   Progress, ItemFailure, BatchResult, LogEvent, Cancel
   src/pytoolbox/registry.py  Tool, System, TOOLS, one constant per tool
-  src/pytoolbox/tools/dev/   Developer Utilities, pure functions (text.py: text-count)
+  src/pytoolbox/worker.py    Worker: a process for a call that may never return
+  src/pytoolbox/tools/dev/   Developer Utilities, pure functions (text.py, regex.py)
 packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
   src/pytoolbox_gui/server.py   create_app(): routes, Host and Origin guard, errors
@@ -138,7 +139,7 @@ Only the runner starts a process: an external command or a script under `native-
 
 One exception: regular expressions are matched in a worker process, not in process and not through the runner. A `re` match runs in C and checks neither `cancel` nor Ctrl+C, and a thread stuck in one cannot be stopped, so a pattern such as `(a+)+$` would hold a CPU until the process exits. The worker is a `multiprocessing` process.
 
-- The GUI keeps one worker for its next match. A match that takes more than 1 second is `OperationError` ("timed out"); the GUI terminates the worker and starts a new one for the next match.
+- The GUI keeps one worker for its next match. A match that takes more than 1 second is `OperationError` (`Timed out after 1 s.`); the GUI terminates the worker and starts a new one for the next match. Stopping the server terminates the worker.
 - The CLI starts a worker for its one match and waits with no limit. On Ctrl+C it terminates the worker and exits `130`.
 
 Recorded in [ADR 0010](adr/0010-regex-worker.md).
@@ -169,6 +170,8 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 
 `pytoolbox text-count` prints `total`, `non-space`, and `half-width`, one per line, each label padded to the longest and followed by two spaces and the number.
 
+`pytoolbox regex PATTERN [TEXT] -g -i -m` prints each match as `N  start-end  <JSON string>`, then each group under it, indented two spaces: `N  start-end  <JSON string>`, or `N name  start-end  <JSON string>` when the group is named, or `N  unmatched` when it took no part in the match. Positions count code points; `end` is exclusive. No matches print nothing and exit `0`. `run` sets stdout and stderr to UTF-8, so a match that is not in the console's code page still prints.
+
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
 `pytoolbox gui` is the only command that starts the GUI. It imports `pytoolbox_gui` when called, so the core does not depend on it. If the package is missing, it prints the install command of §7.1 to stderr and exits `2`. If the port is in use, it exits `2` and opens no browser.
@@ -191,6 +194,8 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 - Paths use the tool's CLI name. No system prefix and no `/api`.
 - `GET` never runs a tool or changes state; browsers prefetch and follow links. Every run is `POST`, even for a read-only tool.
 - A Developer Utilities screen posts its input on every `input` event with `hx-sync="this:replace"`, so a request still in flight is replaced and the last keystroke always wins; htmx's default `drop` would discard it. The search box uses the same `hx-sync`. Source: [htmx hx-sync](https://htmx.org/attributes/hx-sync/).
+- A screen with more than one field posts the form, not one control, on `input` and on `submit` (`hx-trigger="input, submit"`), so Enter does not leave the page. The regex screen is that form: the pattern, `g` `i` `m`, and the text.
+- A successful result fragment includes an empty `#error` with `hx-swap-oob="true"`, so a previous 422 or 500 does not stay after the next good input. The initial page does not include it. While `#error` holds an error, `.tool-result` is dimmed, so the last good result is not read as the current one.
 - A browser submits a textarea's line breaks as CRLF. The handler reads text fields with `screens.text_field`, which turns them back into LF, so a tool counts what the box shows. Source: [HTML: converting an entry list to a list of name-value pairs](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#converting-an-entry-list-to-a-list-of-name-value-pairs).
 - Form fields carry the CLI options in `snake_case` (`--dry-run` is `dry_run`) and are form-encoded, the HTMX default. The handler calls the same library function as the CLI. Paths are typed as text; the server reads the local disk, so there is no upload.
 - An unknown tool on `GET` returns `404`. A `POST` to the endpoint of the other kind (`/tools/<tool>` for a streaming tool, or the reverse) is `InputError`.

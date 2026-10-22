@@ -120,6 +120,7 @@ def create_app(
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         yield
         runs.cancel_all()
+        screens.close_workers()
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=_PACKAGE / "static"), name="static")

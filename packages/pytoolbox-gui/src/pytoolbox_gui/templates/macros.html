@@ -2,6 +2,11 @@
 <span class="icon" style="--icon: url('/static/icons/ic_fluent_{{ name }}_20_regular.svg')" aria-hidden="true"></span>
 {%- endmacro %}
 
+{# In a result fragment: empties the error area, which still shows the last failure. #}
+{% macro clear_error() -%}
+<div id="error" class="error-area" aria-live="polite" hx-swap-oob="true"></div>
+{%- endmacro %}
+
 {% macro tool_link(screen, class) -%}
 <a class="{{ class }}" href="/tools/{{ screen.tool.name }}" hx-get="/tools/{{ screen.tool.name }}"
    hx-target="#pane" hx-push-url="true" title="{{ screen.tool.summary }}">{{ caller() }}</a>

@@ -1,0 +1,23 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/regex" hx-trigger="input, submit" hx-sync="this:replace"
+      hx-target="#regex-result">
+  <section class="split-side">
+    <h2><label for="regex-pattern">Pattern</label></h2>
+    <input id="regex-pattern" class="regex-pattern" name="pattern" spellcheck="false"
+           autocomplete="off" autofocus>
+    <fieldset class="regex-flags">
+      <legend class="visually-hidden">Flags</legend>
+      <label><input type="checkbox" name="global"><code>g</code> Every match</label>
+      <label><input type="checkbox" name="ignore_case"><code>i</code> Ignore case</label>
+      <label><input type="checkbox" name="multiline"><code>m</code> Multiline</label>
+    </fieldset>
+    <h2><label for="regex-text">Text</label></h2>
+    <textarea id="regex-text" name="text" spellcheck="false"></textarea>
+  </section>
+  <section id="regex-result" class="split-side tool-result" aria-live="polite">
+    {%- include "tools/regex-result.html" -%}
+  </section>
+</form>

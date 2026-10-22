@@ -45,6 +45,14 @@ def test_post_counts_a_textarea_line_break_as_one_character(client: TestClient) 
     assert _counts(response.text) == ["3", "2", "2"]
 
 
+def test_post_clears_an_earlier_error_and_the_page_does_not(client: TestClient) -> None:
+    response = client.post("/tools/text-count", data={"text": "a"}, headers=ORIGIN)
+
+    assert 'id="error"' in response.text
+    assert 'hx-swap-oob="true"' in response.text
+    assert "hx-swap-oob" not in client.get("/tools/text-count", headers=HX).text
+
+
 def test_post_without_the_field_counts_empty_text(client: TestClient) -> None:
     response = client.post("/tools/text-count", headers=ORIGIN)
 

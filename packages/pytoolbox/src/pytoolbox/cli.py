@@ -1,14 +1,22 @@
 """The `pytoolbox` command: one level, `pytoolbox <tool>`."""
 
 import argparse
+import io
+import json
 import sys
 from collections.abc import Callable, Sequence
+from functools import partial
 from typing import NoReturn
 
 from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import Tool
+from pytoolbox.tools.dev.regex import Group, Match, match_pattern
 from pytoolbox.tools.dev.text import TextCount, count_text
+from pytoolbox.worker import Worker
+
+INTERRUPTED = 130
+"""The exit code after Ctrl+C: 128 plus `SIGINT`."""
 
 GUI_MISSING = (
     "The GUI is not installed. Install it with:\n"
@@ -70,6 +78,37 @@ def format_text_count(count: TextCount) -> str:
     return "\n".join(f"{label:<{width}}  {number}" for label, number in rows)
 
 
+def _quoted(text: str) -> str:
+    return json.dumps(text, ensure_ascii=False)
+
+
+def _group_line(group: Group) -> str:
+    label = f"{group.number} {group.name}" if group.name is not None else str(group.number)
+    if group.text is None:
+        return f"  {label}  unmatched"
+    return f"  {label}  {group.start}-{group.end}  {_quoted(group.text)}"
+
+
+def format_matches(matches: Sequence[Match]) -> str:
+    """Render matches as `pytoolbox regex` prints them.
+
+    Each match is one line: its number from 1, `start-end`, and the matched text as a JSON
+    string. Each group follows on its own line, indented by two spaces: its number, its name if
+    it has one, and `start-end` and the text, or `unmatched` when it took no part in the match.
+
+    Args:
+        matches: The matches.
+
+    Returns:
+        The lines. Empty when there are no matches.
+    """
+    lines: list[str] = []
+    for index, match in enumerate(matches, start=1):
+        lines.append(f"{index}  {match.start}-{match.end}  {_quoted(match.text)}")
+        lines.extend(_group_line(group) for group in match.groups)
+    return "\n".join(lines)
+
+
 def _list(_args: argparse.Namespace) -> int:
     text = format_list(registry.TOOLS)
     if text:
@@ -80,6 +119,23 @@ def _list(_args: argparse.Namespace) -> int:
 def _text_count(args: argparse.Namespace) -> int:
     text: str | None = args.text
     print(format_text_count(count_text(read_stdin() if text is None else text)))
+    return 0
+
+
+def _regex(args: argparse.Namespace) -> int:
+    given: str | None = args.text
+    match = partial(
+        match_pattern,
+        args.pattern,
+        read_stdin() if given is None else given,
+        all_matches=args.all_matches,
+        ignore_case=args.ignore_case,
+        multiline=args.multiline,
+    )
+    with Worker() as worker:
+        output = format_matches(worker.call(match))
+    if output:
+        print(output)
     return 0
 
 
@@ -102,7 +158,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         argv: Arguments after the program name. `None` reads `sys.argv`.
 
     Returns:
-        0 on success, 1 on `InputError`, 2 on `OperationError`.
+        0 on success, 1 on `InputError`, 2 on `OperationError`, 130 on Ctrl+C.
     """
     parser = _Parser(prog="pytoolbox", description="Personal toolbox.")
     commands = parser.add_subparsers(dest="command", required=True, metavar="<tool>")
@@ -113,6 +169,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     text_count = commands.add_parser(registry.TEXT_COUNT.name, help=registry.TEXT_COUNT.summary)
     text_count.add_argument("text", nargs="?", help="The text. Omit it to read standard input.")
     text_count.set_defaults(handler=_text_count)
+    regex = commands.add_parser(registry.REGEX.name, help=registry.REGEX.summary)
+    regex.add_argument("pattern", help="The regular expression, in Python `re` syntax.")
+    regex.add_argument("text", nargs="?", help="The text. Omit it to read standard input.")
+    regex.add_argument(
+        "-g", "--global", dest="all_matches", action="store_true", help="Show every match."
+    )
+    regex.add_argument("-i", "--ignore-case", action="store_true", help="Ignore case.")
+    regex.add_argument(
+        "-m", "--multiline", action="store_true", help="Let ^ and $ match at line breaks."
+    )
+    regex.set_defaults(handler=_regex)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)
@@ -124,8 +191,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     except OperationError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
+    except KeyboardInterrupt:
+        return INTERRUPTED
 
 
 def run() -> NoReturn:
-    """Entry point of the `pytoolbox` script."""
+    """Entry point of the `pytoolbox` script. Standard output and error are UTF-8."""
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8")
     sys.exit(main())

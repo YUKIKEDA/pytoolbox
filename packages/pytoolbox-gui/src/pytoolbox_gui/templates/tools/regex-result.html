@@ -1,0 +1,49 @@
+{% from "macros.html" import clear_error %}
+{% if matches is defined %}{{ clear_error() }}{% endif %}
+{% set matches = matches | default(()) %}
+{% macro captured(text) %}
+{%- if text %}<code class="regex-value">{{ text }}</code>{% else %}<span class="regex-quiet">empty</span>{% endif -%}
+{% endmacro %}
+<h2>Highlighted</h2>
+<pre class="regex-text">
+{%- for segment in segments | default(()) -%}
+{%- if segment.match is none -%}
+{{ segment.text }}
+{%- else -%}
+<mark class="regex-hit {{ 'regex-hit-odd' if segment.match is odd else 'regex-hit-even' }}" title="Match {{ segment.match }}">{{ segment.text }}</mark>
+{%- endif -%}
+{%- endfor -%}
+</pre>
+<h2>Matches ({{ matches | length }})</h2>
+{% if matches %}
+<ol class="regex-matches">
+  {% for match in matches %}
+  <li class="regex-match">
+    <div class="regex-row">
+      <span class="regex-label">Match {{ loop.index }}</span>
+      <span class="regex-span">{{ match.start }}–{{ match.end }}</span>
+    </div>
+    {{ captured(match.text) }}
+    {% if match.groups %}
+    <ol class="regex-groups">
+      {% for group in match.groups %}
+      <li>
+        <div class="regex-row">
+          <span class="regex-label">Group {{ group.number }}{% if group.name is not none %} <code>{{ group.name }}</code>{% endif %}</span>
+          {% if group.text is none %}
+          <span class="regex-quiet">unmatched</span>
+          {% else %}
+          <span class="regex-span">{{ group.start }}–{{ group.end }}</span>
+          {% endif %}
+        </div>
+        {% if group.text is not none %}{{ captured(group.text) }}{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="regex-quiet">No matches.</p>
+{% endif %}
