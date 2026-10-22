@@ -31,6 +31,13 @@ class Tool:
     summary: str
 
 
+REGEX = Tool(
+    "regex",
+    System.DEVELOPER,
+    "Text",
+    "Match a regular expression against a text and show each match and its groups.",
+)
+
 TEXT_COUNT = Tool(
     "text-count",
     System.DEVELOPER,
@@ -38,7 +45,7 @@ TEXT_COUNT = Tool(
     "Count characters, characters that are not white space, and half-width characters.",
 )
 
-TOOLS: tuple[Tool, ...] = (TEXT_COUNT,)
+TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

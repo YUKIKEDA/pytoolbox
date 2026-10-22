@@ -12,6 +12,7 @@ import pytoolbox_gui.cli
 from pytoolbox import cli, registry
 from pytoolbox.errors import OperationError
 from pytoolbox.registry import System, Tool
+from pytoolbox.tools.dev.regex import Group, Match
 
 TOOLS = (
     Tool("text-count", System.DEVELOPER, "Text", "Count characters."),
@@ -102,9 +103,14 @@ def test_gui_does_not_print_the_list(
     assert capsys.readouterr().out == ""
 
 
-def test_the_real_registry_lists_text_count_under_text(capsys: pytest.CaptureFixture[str]) -> None:
+def test_the_real_registry_lists_regex_and_text_count_under_text(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     assert cli.main(["list"]) == 0
-    assert capsys.readouterr().out.startswith("Developer Utilities\n  Text\n    text-count  ")
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[:2] == ["Developer Utilities", "  Text"]
+    assert lines[2].startswith("    regex       ")
+    assert lines[3].startswith("    text-count  ")
 
 
 def _stdin(monkeypatch: pytest.MonkeyPatch, data: bytes) -> None:
@@ -141,6 +147,77 @@ def test_text_count_rejects_standard_input_that_is_not_utf8(
 
     assert cli.main(["text-count"]) == 1
     assert capsys.readouterr().err.startswith("error: Standard input is not UTF-8")
+
+
+def test_format_matches_puts_groups_under_their_match() -> None:
+    matches = (
+        Match(0, 3, 'a"\n', (Group(1, "word", 0, 1, "a"), Group(2, None, None, None, None))),
+        Match(4, 4, "", ()),
+    )
+
+    assert cli.format_matches(matches) == "\n".join(
+        [
+            '1  0-3  "a\\"\\n"',
+            '  1 word  0-1  "a"',
+            "  2  unmatched",
+            '2  4-4  ""',
+        ]
+    )
+
+
+def test_format_matches_is_empty_without_matches() -> None:
+    assert cli.format_matches(()) == ""
+
+
+def test_regex_prints_every_match_with_g(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["regex", "-g", r"(\d)", "a1b2"]) == 0
+    assert capsys.readouterr().out == '1  1-2  "1"\n  1  1-2  "1"\n2  3-4  "2"\n  1  3-4  "2"\n'
+
+
+def test_regex_flags_and_standard_input(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stdin(monkeypatch, "\ufeffa\nA\n".encode())
+
+    assert cli.main(["regex", "--ignore-case", "--multiline", "^a$"]) == 0
+    assert capsys.readouterr().out == '1  0-1  "a"\n'
+
+
+def test_regex_without_a_match_prints_nothing(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["regex", "z", "abc"]) == 0
+    assert capsys.readouterr().out == ""
+
+
+def test_regex_with_an_invalid_pattern_exits_1(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["regex", "(", "x"]) == 1
+    assert capsys.readouterr().err.startswith("error: Invalid pattern: ")
+
+
+def test_ctrl_c_exits_130_without_a_traceback(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def interrupted(_args: argparse.Namespace) -> int:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli, "_regex", interrupted)
+
+    assert cli.main(["regex", "a", "a"]) == 130
+    assert capsys.readouterr().err == ""
+
+
+def test_run_writes_utf8_to_a_pipe(monkeypatch: pytest.MonkeyPatch) -> None:
+    out = io.TextIOWrapper(io.BytesIO(), encoding="cp932", newline="\n")
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "argv", ["pytoolbox", "regex", ".", "\u20ac"])
+
+    with pytest.raises(SystemExit) as raised:
+        cli.run()
+
+    out.flush()
+    assert raised.value.code == 0
+    buffer = out.buffer
+    assert isinstance(buffer, io.BytesIO)
+    assert buffer.getvalue() == '1  0-1  "\u20ac"\n'.encode()
 
 
 def test_duplicate_registry_names_stop_the_cli(monkeypatch: pytest.MonkeyPatch) -> None:
