@@ -308,6 +308,18 @@ body:has(.sidebar-toggle:checked) .sidebar {
   font-size: 12px;
 }
 
+.tool-header {
+  & h1 {
+    margin: 0;
+    font-size: 28px;
+  }
+
+  & p {
+    margin: calc(var(--space) / 2) 0 0;
+    color: var(--muted);
+  }
+}
+
 /* The DevToys layout: input on the left, output on the right. */
 .split {
   display: grid;
@@ -317,7 +329,43 @@ body:has(.sidebar-toggle:checked) .sidebar {
   & textarea {
     width: 100%;
     min-height: 20rem;
+    resize: vertical;
     font-family: var(--mono);
+  }
+}
+
+.split-side {
+  display: grid;
+  gap: var(--space);
+  align-content: start;
+  min-width: 0;
+
+  & h2 {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+.counts {
+  display: grid;
+  gap: var(--space);
+  margin: 0;
+
+  & div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: calc(var(--space) * 1.5) calc(var(--space) * 2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-large);
+    background: var(--card);
+  }
+
+  & dd {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 }
 

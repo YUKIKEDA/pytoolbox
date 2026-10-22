@@ -29,7 +29,8 @@
         {{ icon("search") }}
         <input type="search" name="q" value="{{ query | default('') }}" placeholder="Search tools"
                aria-label="Search tools" autocomplete="off" hx-get="/search"
-               hx-trigger="input changed delay:200ms, keyup[key=='Enter']" hx-target="#pane">
+               hx-trigger="input changed delay:200ms, keyup[key=='Enter']" hx-sync="this:replace"
+               hx-target="#pane">
       </label>
       <a class="sidebar-item sidebar-home" href="/" hx-get="/" hx-target="#pane" hx-push-url="true"
          title="All tools">{{ icon("home") }}<span class="sidebar-text">All tools</span></a>

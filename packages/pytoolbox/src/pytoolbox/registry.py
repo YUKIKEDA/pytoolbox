@@ -31,7 +31,14 @@ class Tool:
     summary: str
 
 
-TOOLS: tuple[Tool, ...] = ()
+TEXT_COUNT = Tool(
+    "text-count",
+    System.DEVELOPER,
+    "Text",
+    "Count characters, characters that are not white space, and half-width characters.",
+)
+
+TOOLS: tuple[Tool, ...] = (TEXT_COUNT,)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

@@ -3,7 +3,8 @@
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
-from pytoolbox.registry import Tool
+from pytoolbox.registry import TEXT_COUNT, Tool
+from pytoolbox.tools.dev.text import count_text
 from pytoolbox_gui.sse import Stream
 
 type Form = Mapping[str, Sequence[str]]
@@ -43,7 +44,31 @@ class Screen:
     stream: Callable[[Form], Stream] | None = None
 
 
-SCREENS: tuple[Screen, ...] = ()
+def text_field(form: Form, name: str) -> str:
+    """Return a text field as the user typed it.
+
+    A browser submits a textarea's line breaks as CRLF. They become LF again, so a tool sees
+    the text the box shows.
+
+    Args:
+        form: The submitted form.
+        name: The field name. A missing field is empty text; a repeated field gives its last value.
+
+    Returns:
+        The text.
+    """
+    values = form.get(name, ())
+    return values[-1].replace("\r\n", "\n") if values else ""
+
+
+def run_text_count(form: Form) -> Fragment:
+    """Count the `text` field for the `text-count` screen."""
+    return Fragment("tools/text-count-result.html", {"count": count_text(text_field(form, "text"))})
+
+
+SCREENS: tuple[Screen, ...] = (
+    Screen(TEXT_COUNT, "tools/text-count.html", "text_word_count", run=run_text_count),
+)
 """Every screen. A tool row adds its screen here with its registry entry."""
 
 

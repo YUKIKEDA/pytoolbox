@@ -1,4 +1,6 @@
+import argparse
 import importlib.abc
+import io
 import sys
 from collections.abc import Sequence
 from importlib.machinery import ModuleSpec
@@ -69,7 +71,11 @@ def test_list_prints_the_registry(
     assert capsys.readouterr().out == cli.format_list(TOOLS) + "\n"
 
 
-def test_list_prints_nothing_for_an_empty_registry(capsys: pytest.CaptureFixture[str]) -> None:
+def test_list_prints_nothing_for_an_empty_registry(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(registry, "TOOLS", ())
+
     assert cli.main(["list"]) == 0
     assert capsys.readouterr().out == ""
 
@@ -86,11 +92,55 @@ def test_missing_command_exits_1() -> None:
 def test_gui_does_not_print_the_list(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(cli, "_gui", lambda: 0)
+    def no_gui(_args: argparse.Namespace) -> int:
+        return 0
+
+    monkeypatch.setattr(cli, "_gui", no_gui)
     monkeypatch.setattr(registry, "TOOLS", TOOLS)
 
     assert cli.main(["gui"]) == 0
     assert capsys.readouterr().out == ""
+
+
+def test_the_real_registry_lists_text_count_under_text(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["list"]) == 0
+    assert capsys.readouterr().out.startswith("Developer Utilities\n  Text\n    text-count  ")
+
+
+def _stdin(monkeypatch: pytest.MonkeyPatch, data: bytes) -> None:
+    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(data)))
+
+
+def test_text_count_counts_the_argument(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["text-count", "ab c\u3000\u6f22\uff71"]) == 0
+    assert capsys.readouterr().out == "total       7\nnon-space   5\nhalf-width  5\n"
+
+
+def test_text_count_reads_standard_input_without_its_bom(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stdin(monkeypatch, "\ufeff\u3042a\n".encode())
+
+    assert cli.main(["text-count"]) == 0
+    assert capsys.readouterr().out == "total       3\nnon-space   2\nhalf-width  1\n"
+
+
+def test_text_count_counts_an_empty_argument_not_standard_input(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stdin(monkeypatch, b"ignored")
+
+    assert cli.main(["text-count", ""]) == 0
+    assert capsys.readouterr().out.startswith("total       0\n")
+
+
+def test_text_count_rejects_standard_input_that_is_not_utf8(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stdin(monkeypatch, b"\x82\xa0")
+
+    assert cli.main(["text-count"]) == 1
+    assert capsys.readouterr().err.startswith("error: Standard input is not UTF-8")
 
 
 def test_duplicate_registry_names_stop_the_cli(monkeypatch: pytest.MonkeyPatch) -> None:
