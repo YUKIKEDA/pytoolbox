@@ -148,7 +148,8 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 
 | Request                   | Does                                                                 |
 | ------------------------- | -------------------------------------------------------------------- |
-| `GET /`                   | The shell page: sidebar and an empty pane                            |
+| `GET /`                   | The shell page: sidebar, and the home cards in the pane              |
+| `GET /search?q=<text>`    | The home cards of the tools that match. `HX-Request` gets the pane   |
 | `GET /tools/<tool>`       | The tool's page. A request with `HX-Request` gets only the pane      |
 | `POST /tools/<tool>`      | Runs a tool that returns at once, and returns the result fragment    |
 | `POST /tools/<tool>/runs` | Starts a streaming run, and returns a fragment that holds the run ID |
@@ -165,6 +166,9 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 - Every request's `Host` must be `127.0.0.1:<port>` or `localhost:<port>`, or it returns `403`. This stops DNS rebinding. Every `POST` must carry an `Origin` of `http://127.0.0.1:<port>` or `http://localhost:<port>`; a missing or `null` `Origin` returns `403`. This stops other sites from posting to the server. No CORS headers are sent. Sources: [GitHub: Localhost dangers](https://github.blog/security/application-security/localhost-dangers-cors-and-dns-rebinding/), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 - HTMX and its SSE extension ship under `static/` at pinned versions. No CDN: the GUI has tools for a broken network, and it must load without one. Nothing in the frontend is built.
 - The CSS is one hand-written file, `static/app.css`, in plain CSS: custom properties for colors and spacing, grid for the layout, nesting where it helps. No CSS framework and no utility classes. Class names describe the part (`sidebar`, `pane`, `console`), not the look.
+- The look follows `docs/design.ja.md` §5: the OS light or dark setting through `light-dark()`, a sidebar that collapses to its icons, and cards on the home page.
+- Search matches `q` against each tool's name and summary, case-insensitive, as a substring. An empty `q` returns every tool. The search box sends it with `hx-get` on `input changed delay:200ms, keyup[key=='Enter']`, so typing sends one request per pause and no script is written by hand. Search is a `GET` because it runs nothing. Source: [htmx Active Search](https://htmx.org/examples/active-search/).
+- Icons are SVG files from [Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons) (MIT), size 20, `regular`, copied to `static/icons/` under their upstream file names (`ic_fluent_home_20_regular.svg`) with the upstream `LICENSE` beside them. They come from commit `4c94ad5f4081168c0d45bdc368f230ecb757cd09`; a newer icon is copied from a named commit, and this line is updated. Only icons in use are copied. A tool's icon is `Screen.icon`, the name between `ic_fluent_` and `_20_regular`. CSS draws an icon as a `mask` filled with `currentColor`, so it follows the theme.
 - Tests use `TestClient` and send `Host` and `Origin` as a browser would. A test also checks each `403` case.
 
 `cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/design.ja.md` §9.
