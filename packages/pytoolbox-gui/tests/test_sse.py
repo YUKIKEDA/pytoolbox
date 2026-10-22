@@ -1,12 +1,13 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.results import BatchResult, Cancel, LogEvent, Progress
-from pytoolbox_gui.sse import Event, Run, Runs, Value, event_name, format_event
+from pytoolbox_gui.sse import Event, Run, Runs, Stream, Value, event_name, format_event
 
 
 def test_format_event_splits_lines_into_data_fields() -> None:
@@ -78,6 +79,22 @@ def test_run_turns_an_unexpected_exception_into_an_operation_error() -> None:
 
     assert isinstance(events[0], OperationError)
     assert "unexpectedly" in str(events[0])
+
+
+def test_run_stops_with_an_operation_error_when_a_tool_yields_an_unknown_value() -> None:
+    def stream(_cancel: Cancel) -> Iterator[object]:
+        yield BatchResult(1)
+        yield "not a result"
+        yield BatchResult(2)
+
+    run = Run(cast("Stream", stream))
+    run.start()
+    events = _drain(run)
+
+    assert events[0] == BatchResult(1)
+    assert len(events) == 2
+    assert isinstance(events[1], OperationError)
+    assert event_name(events[1]) == "error"
 
 
 def test_cancel_reaches_the_tool() -> None:

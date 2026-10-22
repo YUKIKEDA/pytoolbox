@@ -18,6 +18,14 @@ type Event = Value | PytoolboxError
 _logger = logging.getLogger(__name__)
 
 
+def _checked(value: object) -> Value:
+    # Tool code is not bound by the type checker at run time; event_name needs a known type.
+    if isinstance(value, Progress | LogEvent | BatchResult):
+        return value
+    msg = f"A stream yielded {type(value).__name__}, not Progress, LogEvent, or BatchResult."
+    raise TypeError(msg)
+
+
 class Run:
     """One streaming run of a tool, worked in a thread.
 
@@ -54,7 +62,7 @@ class Run:
     def _work(self) -> None:
         try:
             for value in self._stream(self.cancelled):
-                self._events.put(value)
+                self._events.put(_checked(value))
         except PytoolboxError as error:
             self._events.put(error)
         except Exception:

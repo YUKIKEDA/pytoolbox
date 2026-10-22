@@ -129,7 +129,7 @@ A tool that writes or deletes takes `--dry-run`, holds a lock on each write targ
 
 ### Streaming
 
-Only batch `Progress` and UDP `LogEvent` stream. The CLI writes one line per value to stdout. The GUI sends them over SSE. Other tools return one result.
+Only batch `Progress` and UDP `LogEvent` stream. The CLI writes one line per value to stdout. The GUI sends them over SSE. Other tools return one result. A stream yields only `Progress`, `LogEvent`, and a final `BatchResult`; the GUI ends a run that yields anything else as an unexpected failure.
 
 ### Subprocess
 
@@ -155,7 +155,7 @@ A test never starts the real GUI server: `pytoolbox gui` tests replace `serve`, 
 
 argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/design.ja.md` §6). `pytoolbox list` prints each tool with its system and category (§5.1). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000` (§7.2).
 
-A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Errors print `error: <message>` to stderr.
+A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Errors print `error: <message>` to stderr. Each subcommand names its handler with `set_defaults(handler=...)`, and `main` calls it; there is no fallback command.
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 

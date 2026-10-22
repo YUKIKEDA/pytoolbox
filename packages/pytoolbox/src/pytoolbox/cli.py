@@ -2,7 +2,7 @@
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import NoReturn
 
 from pytoolbox import registry
@@ -42,6 +42,13 @@ def format_list(tools: Sequence[Tool]) -> str:
     return "\n".join(lines)
 
 
+def _list() -> int:
+    text = format_list(registry.TOOLS)
+    if text:
+        print(text)
+    return 0
+
+
 def _gui() -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -65,23 +72,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     parser = _Parser(prog="pytoolbox", description="Personal toolbox.")
     commands = parser.add_subparsers(dest="command", required=True, metavar="<tool>")
-    commands.add_parser("list", help="List the tools by system and category.")
-    commands.add_parser("gui", help="Start the GUI on 127.0.0.1:8000 and open a browser.")
+    listing = commands.add_parser("list", help="List the tools by system and category.")
+    listing.set_defaults(handler=_list)
+    gui = commands.add_parser("gui", help="Start the GUI on 127.0.0.1:8000 and open a browser.")
+    gui.set_defaults(handler=_gui)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)
-        if args.command == "gui":
-            return _gui()
-        text = format_list(registry.TOOLS)
-        if text:
-            print(text)
+        handler: Callable[[], int] = args.handler
+        return handler()
     except InputError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     except OperationError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
-    return 0
 
 
 def run() -> NoReturn:

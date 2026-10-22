@@ -83,6 +83,16 @@ def test_missing_command_exits_1() -> None:
     assert cli.main([]) == 1
 
 
+def test_gui_does_not_print_the_list(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli, "_gui", lambda: 0)
+    monkeypatch.setattr(registry, "TOOLS", TOOLS)
+
+    assert cli.main(["gui"]) == 0
+    assert capsys.readouterr().out == ""
+
+
 def test_duplicate_registry_names_stop_the_cli(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(registry, "TOOLS", (*TOOLS, TOOLS[0]))
 
