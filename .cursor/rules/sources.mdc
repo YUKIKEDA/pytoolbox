@@ -1,0 +1,18 @@
+---
+description: Read and cite the official source before recommending how to use a library, protocol, or security practice
+alwaysApply: true
+---
+
+# Sources
+
+Before recommending how to use a library, a protocol, or a security practice, read its official source: the project's documentation, the RFC, or a body such as OWASP. Cite it where the decision is written: the Grill question, `docs/conventions.md`, or the ADR.
+
+A recommendation does not contradict the reason the library was chosen. If it would, say so and ask in a Grill.
+
+```text
+# BAD
+Agent: recommends a JSON API and a Tailwind build for an HTMX GUI, from memory
+
+# GOOD
+Agent: reads the htmx docs, recommends HTML responses and CSS with no build, and links the pages
+```
