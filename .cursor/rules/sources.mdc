@@ -9,10 +9,19 @@ Before recommending how to use a library, a protocol, or a security practice, re
 
 A recommendation does not contradict the reason the library was chosen. If it would, say so and ask in a Grill.
 
+A library's behavior that a recommendation rests on is checked before the Grill question: in the official documentation, or by an experiment when the documentation does not say. Write how it was checked beside the reason.
+
 ```text
 # BAD
 Agent: recommends a JSON API and a Tailwind build for an HTMX GUI, from memory
 
 # GOOD
 Agent: reads the htmx docs, recommends HTML responses and CSS with no build, and links the pages
+
+# BAD
+Agent: recommends "the CLI needs no limit; Ctrl+C stops a stuck re match", from memory
+Later: an experiment shows Ctrl+C does not stop it, and the decision is grilled again
+
+# GOOD
+Agent: sends KeyboardInterrupt to a stuck re match first, sees it run on, and recommends from that
 ```
