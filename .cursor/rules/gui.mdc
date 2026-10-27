@@ -11,6 +11,8 @@ A PR that changes the GUI is opened in a browser before it is called ready. Take
 
 How a screen sends its input (events, Enter, an htmx trigger filter) is tried in a browser before a Grill question recommends it. A browser script waits after each action for the new content, such as the expected message, not for a selector the previous state already matches.
 
+htmx `hx-*` attributes inherit from ancestors. A fragment swapped into another element takes that element's `hx-target` and `hx-swap`, so each swapping part of the fragment names its own target. A shared part, such as `run.html`, is checked in a browser in the form it is used: inside a form that sets `hx-target`.
+
 ```text
 # BAD
 Agent: builds the shell from "DevToys-like", opens the PR, and never loads the page
@@ -44,4 +46,11 @@ Agent: types a broken path, waits for "#error .error", and reads the error left
 
 # GOOD
 Agent: waits until #error contains "not valid XML", then reads it
+
+# BAD
+Agent: checks run.html on a page with no hx-target; the first screen that posts its form
+       with hx-target="#run" gets its whole run replaced by the first progress event
+
+# GOOD
+Agent: gives each sse-swap part hx-target="this" and checks the run inside the real form
 ```
