@@ -9,6 +9,8 @@ Before building a screen, read `docs/design.ja.md` §5. If it does not say how t
 
 A PR that changes the GUI is opened in a browser before it is called ready. Take screenshots at the tab's actual size, so the result pane is in the frame. A cropped shot, or a viewport override that cuts the output, is not verification. List what was checked under `## Test plan`: each screen, each interaction, both the light and the dark theme, and the error and timeout paths the screen has. A preview with fake tools runs on a port other than `8000`. Its script is removed in the same turn.
 
+How a screen sends its input (events, Enter, an htmx trigger filter) is tried in a browser before a Grill question recommends it. A browser script waits after each action for the new content, such as the expected message, not for a selector the previous state already matches.
+
 ```text
 # BAD
 Agent: builds the shell from "DevToys-like", opens the PR, and never loads the page
@@ -26,4 +28,20 @@ Agent: sets the viewport to 1280x760, screenshots the regex screen, and the matc
 # GOOD
 Agent: screenshots at the tab's size, with the highlighted text and the match list
        in frame, then types an invalid pattern and a stuck pattern and records both
+
+# BAD
+Agent: recommends hx-trigger="change, submit" for two path fields without trying it
+Later: Enter submits nothing, because a form with two text fields and no button
+       has no implicit submission, and the convention is rewritten
+
+# GOOD
+Agent: loads a sketch of the form, presses Enter and Tab, sees which events fire,
+       and recommends the trigger that does
+
+# BAD
+Agent: types a broken path, waits for "#error .error", and reads the error left
+       from the previous input
+
+# GOOD
+Agent: waits until #error contains "not valid XML", then reads it
 ```
