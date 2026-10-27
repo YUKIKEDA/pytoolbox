@@ -1,5 +1,5 @@
 ---
-description: English code and process docs; Japanese spec; bilingual reader pages
+description: English code, process docs, and roadmap; Japanese spec; bilingual README
 alwaysApply: true
 ---
 
@@ -13,21 +13,17 @@ Write these in English:
 - Tests: names, assertion messages
 - `.cursor/` rules and skills, `.github/` template headings
 - Commit `type` and `scope`, PR titles' type and scope
+- `docs/roadmap.md`. It has no Japanese copy; the owner dropped `docs/roadmap.ja.md` as not needed (#37)
 
 Chat with the owner is in Japanese, including reports and Grill questions. Issue bodies, PR bodies, and commit subjects may be Japanese.
 
 ## Bilingual documents
 
-English is the source of truth. Change both files of a pair in the same PR. Headings stay English.
-
-| English           | Japanese             |
-| ----------------- | -------------------- |
-| `README.md`       | `README.ja.md`       |
-| `docs/roadmap.md` | `docs/roadmap.ja.md` |
+The README is the one pair: `README.md` and `README.ja.md`. English is the source of truth. Change both files in the same PR. Headings stay English. Do not add a Japanese copy of another file without the owner's order.
 
 Do not add `CONTRIBUTING.md`. The owner's process is `AGENTS.md` and `.cursor/rules/`.
 
-Keep the language switch line at the top of both files of a pair. A Japanese-only change must not change the meaning.
+Keep the language switch line at the top of both README files. A Japanese-only change must not change the meaning.
 
 ## Spec
 

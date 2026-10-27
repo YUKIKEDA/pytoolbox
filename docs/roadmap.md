@@ -1,5 +1,3 @@
-English | [日本語](roadmap.ja.md)
-
 # Roadmap
 
 The current row's ID lives only in this file. Acceptance text lives on the Issue.
