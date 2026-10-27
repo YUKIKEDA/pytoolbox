@@ -1,0 +1,29 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+{#- A scan is heavy: it starts on Start or Enter, not on leaving a field (docs/design.ja.md §5).
+    A form with a submit button sends once on Enter in any field. -#}
+<form class="split" hx-post="/tools/hardcoding/runs" hx-target="#hardcoding-run">
+  <section class="split-side">
+    <h2><label for="hardcoding-folder">Folder</label></h2>
+    <input id="hardcoding-folder" class="path-field" name="folder" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\src" autofocus>
+    <h2><label for="hardcoding-extensions">Extensions</label></h2>
+    <input id="hardcoding-extensions" class="path-field" name="extensions" spellcheck="false"
+           autocomplete="off" value="{{ extensions }}">
+    <h2><label for="hardcoding-exclude">Exclude folders</label></h2>
+    <input id="hardcoding-exclude" class="path-field" name="exclude" spellcheck="false"
+           autocomplete="off" value="{{ exclude }}">
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Kinds</legend>
+      {% for kind in kinds %}
+      <label><input type="checkbox" name="kind" value="{{ kind }}" checked>{{ kind }}</label>
+      {% endfor %}
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="hardcoding-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter a folder and press Start.</p>
+  </section>
+</form>

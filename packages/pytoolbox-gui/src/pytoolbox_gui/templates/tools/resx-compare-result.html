@@ -2,9 +2,9 @@
 {% if counts is defined %}{{ clear_error() }}{% endif %}
 {% set labels = {"same": "Same", "differ": "Different", "only1": "Only in file 1", "only2": "Only in file 2"} %}
 {% macro value(text) -%}
-{%- if text is none %}<span class="resx-quiet">missing</span>
-{%- elif text %}<code class="resx-value">{{ text }}</code>
-{%- else %}<span class="resx-quiet">empty</span>{% endif -%}
+{%- if text is none %}<span class="quiet">missing</span>
+{%- elif text %}<code class="result-value">{{ text }}</code>
+{%- else %}<span class="quiet">empty</span>{% endif -%}
 {%- endmacro %}
 <h2>Counts</h2>
 <dl class="counts">
@@ -14,9 +14,9 @@
 </dl>
 <h2>Differences ({{ differences | default(()) | length }})</h2>
 {% if not counts %}
-<p class="resx-quiet">Enter both paths.</p>
+<p class="quiet">Enter both paths.</p>
 {% elif differences %}
-<table class="resx-table">
+<table class="result-table">
   <thead>
     <tr><th scope="col">Key</th><th scope="col">File 1</th><th scope="col">File 2</th><th scope="col">Status</th></tr>
   </thead>
@@ -32,5 +32,5 @@
   </tbody>
 </table>
 {% else %}
-<p class="resx-quiet">No differences.</p>
+<p class="quiet">No differences.</p>
 {% endif %}

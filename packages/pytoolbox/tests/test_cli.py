@@ -112,7 +112,46 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
     assert lines[:2] == ["Developer Utilities", "  Text"]
     assert lines[2].startswith("    regex       ")
     assert lines[3].startswith("    text-count  ")
-    assert lines[4:6] == ["  Code", f"    resx-compare  {registry.RESX_COMPARE.summary}"]
+    assert lines[4:7] == [
+        "  Code",
+        f"    resx-compare  {registry.RESX_COMPARE.summary}",
+        f"    hardcoding    {registry.HARDCODING.summary}",
+    ]
+
+
+def test_hardcoding_prints_findings_and_reports_skipped_files_on_stderr(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "a.py").write_text('url = "https://example.com"\n', "utf-8")
+    (tmp_path / "b.js").write_bytes(b"\x81\x7f\xff")
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "c.js").write_text("x = 1234", "utf-8")
+
+    assert cli.main(["hardcoding", str(tmp_path), "--kind", "url"]) == 0
+    captured = capsys.readouterr()
+    assert captured.out == 'src/a.py:1  url  "https://example.com"\n'
+    assert captured.err == "skipped: b.js: Not UTF-8 or CP932.\n"
+
+
+def test_hardcoding_takes_extensions_and_excludes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "keep").mkdir()
+    (tmp_path / "keep" / "a.txt").write_text("x = 1234", "utf-8")
+    (tmp_path / "drop").mkdir()
+    (tmp_path / "drop" / "b.txt").write_text("y = 5678", "utf-8")
+
+    args = ["hardcoding", str(tmp_path), "--ext", "txt", "--exclude", "drop", "--kind", "number"]
+    assert cli.main(args) == 0
+    assert capsys.readouterr().out == 'keep/a.txt:1  number  "1234"\n'
+
+
+def test_hardcoding_unknown_kind_exits_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert cli.main(["hardcoding", str(tmp_path), "--kind", "color"]) == 1
+    assert "Unknown kind: color" in capsys.readouterr().err
 
 
 def _resx_file(path: Path, *pairs: tuple[str, str]) -> Path:

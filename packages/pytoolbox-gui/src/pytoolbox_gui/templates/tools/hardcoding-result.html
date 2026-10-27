@@ -1,0 +1,37 @@
+{% set total = result.counts.values() | sum %}
+<p>{{ result.files }} files scanned, {{ total }} findings{% if result.cancelled %}, <strong>cancelled</strong>{% endif %}.</p>
+<dl class="counts hardcoding-counts">
+  {% for kind, count in result.counts.items() %}
+  <div><dt>{{ kind }}</dt><dd>{{ count }}</dd></div>
+  {% endfor %}
+</dl>
+{% if findings %}
+{% if total > findings | length %}
+<p class="quiet">Showing {{ findings | length }} of {{ total }} findings. Use <code>pytoolbox hardcoding</code> for all.</p>
+{% endif %}
+<table class="result-table hardcoding-table">
+  <thead>
+    <tr><th scope="col">File</th><th scope="col">Line</th><th scope="col">Kind</th><th scope="col">Text</th></tr>
+  </thead>
+  <tbody>
+    {% for finding in findings %}
+    <tr>
+      <td><code>{{ finding.path.as_posix() }}</code></td>
+      <td>{{ finding.line }}</td>
+      <td>{{ finding.kind }}</td>
+      <td><code class="result-value">{{ finding.text }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="quiet">No findings.</p>
+{% endif %}
+{% if result.failures %}
+<h2>Skipped ({{ result.failures | length }})</h2>
+<ul class="failures">
+  {% for failure in result.failures %}
+  <li><code>{{ failure.path.as_posix() }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

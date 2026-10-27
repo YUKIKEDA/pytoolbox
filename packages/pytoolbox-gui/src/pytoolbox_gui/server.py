@@ -18,7 +18,7 @@ from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import System, Tool
 from pytoolbox_gui import screens
 from pytoolbox_gui.screens import Form, Fragment, Screen, matches
-from pytoolbox_gui.sse import Runs, event_name, format_event
+from pytoolbox_gui.sse import Report, Runs, event_name, format_event
 
 HOST = "127.0.0.1"
 PORT = 8000
@@ -161,7 +161,7 @@ def create_app(
     @app.get("/tools/{name}")
     async def tool_page(request: Request, name: str) -> Response:
         screen = screen_for(name)
-        return page(request, screen.template, tool=screen.tool)
+        return page(request, screen.template, 200, tool=screen.tool, **screen.context)
 
     @app.post("/tools/{name}")
     async def tool_run(request: Request, name: str) -> Response:
@@ -192,7 +192,11 @@ def create_app(
         async def events() -> AsyncIterator[str]:
             while (event := await run_in_threadpool(run.next_event)) is not None:
                 name = event_name(event)
-                yield format_event(name, render(Fragment(f"events/{name}.html", {"event": event})))
+                if isinstance(event, Report):
+                    fragment = Fragment(event.template, event.context)
+                else:
+                    fragment = Fragment(f"events/{name}.html", {"event": event})
+                yield format_event(name, render(fragment))
             yield format_event("done", "done")
 
         return StreamingResponse(
