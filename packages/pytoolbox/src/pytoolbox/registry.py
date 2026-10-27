@@ -59,7 +59,14 @@ HARDCODING = Tool(
     "Find hard-coded strings, numbers, IPs, URLs, and email addresses in a folder's sources.",
 )
 
-TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING)
+FOLDER_SIZE = Tool(
+    "folder-size",
+    System.OPERATIONS,
+    "Storage",
+    "List a folder's direct files and folders, largest first, with each folder's total size.",
+)
+
+TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING, FOLDER_SIZE)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

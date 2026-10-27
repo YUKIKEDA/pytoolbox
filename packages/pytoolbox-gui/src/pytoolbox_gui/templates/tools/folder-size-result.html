@@ -1,0 +1,29 @@
+<p>{{ total }} in {{ result.items | length }} items{% if result.unreadable %}, {{ result.unreadable }} unreadable{% endif %}{% if result.cancelled %}, <strong>cancelled</strong>{% endif %}.</p>
+{% if rows %}
+{% if result.items | length > rows | length %}
+<p class="quiet">Showing {{ rows | length }} of {{ result.items | length }} items. Download the CSV for all.</p>
+{% endif %}
+<table class="result-table folder-size-table">
+  <thead>
+    <tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Size</th><th scope="col">Share</th></tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td><code>{{ row.item.name }}</code></td>
+      <td>{{ row.item.kind }}</td>
+      <td class="folder-size-size">{{ row.size }}</td>
+      <td>
+        <div class="share" title="{{ '%.1f' | format(row.share) }}%">
+          <span class="share-bar" style="--share: {{ '%.2f' | format(row.share) }}%"></span>
+          <span class="share-text">{{ '%.1f' | format(row.share) }}%</span>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="quiet">The folder is empty.</p>
+{% endif %}
+<p><a class="button-link" download="folder-size.csv" href="{{ csv_href }}">Download CSV</a></p>

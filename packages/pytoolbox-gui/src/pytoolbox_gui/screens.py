@@ -5,9 +5,10 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
+from urllib.parse import quote
 
 from pytoolbox.errors import InputError
-from pytoolbox.registry import HARDCODING, REGEX, RESX_COMPARE, TEXT_COUNT, Tool
+from pytoolbox.registry import FOLDER_SIZE, HARDCODING, REGEX, RESX_COMPARE, TEXT_COUNT, Tool
 from pytoolbox.results import Cancel, Progress
 from pytoolbox.tools.dev.hardcoding import (
     DEFAULT_EXCLUDE,
@@ -20,6 +21,13 @@ from pytoolbox.tools.dev.hardcoding import (
 from pytoolbox.tools.dev.regex import Match, match_pattern
 from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
+from pytoolbox.tools.system.folder_size import (
+    FolderSizeResult,
+    SizeItem,
+    folder_size,
+    human_size,
+    to_csv,
+)
 from pytoolbox.worker import Worker
 from pytoolbox_gui.sse import Report, Stream, Value
 
@@ -232,7 +240,17 @@ class _LatestScan:
             return self._stop.is_set
 
 
-_latest_scan = _LatestScan()
+_latest_hardcoding = _LatestScan()
+_latest_folder_size = _LatestScan()
+
+
+def _folder_field(form: Form) -> Path:
+    """Return the required `folder` field of a folder-walking screen."""
+    folder = path_field(form, "folder", "Folder")
+    if folder is None:
+        msg = "Folder: enter a path."
+        raise InputError(msg)
+    return folder
 
 
 def stream_hardcoding(form: Form) -> Stream:
@@ -244,23 +262,15 @@ def stream_hardcoding(form: Form) -> Stream:
     Raises:
         InputError: The folder is empty, relative, or missing, no extension or kind is given.
     """
-    folder = path_field(form, "folder", "Folder")
-    if folder is None:
-        msg = "Folder: enter a path."
-        raise InputError(msg)
     stops: list[Cancel] = []
-
-    def cancelled() -> bool:
-        return any(stop() for stop in stops)
-
     values = scan_hardcoding(
-        folder,
+        _folder_field(form),
         extensions=[text_field(form, "extensions")],
         exclude=[text_field(form, "exclude")],
         kinds=form.get("kind", ()),
-        cancel=cancelled,
+        cancel=lambda: any(stop() for stop in stops),
     )
-    stops.append(_latest_scan.supersede())
+    stops.append(_latest_hardcoding.supersede())
 
     def stream(cancel: Cancel) -> Iterator[Value]:
         stops.append(cancel)
@@ -273,6 +283,59 @@ def stream_hardcoding(form: Form) -> Stream:
                 yield value
             elif isinstance(value, HardcodingResult):
                 yield Report("tools/hardcoding-result.html", {"result": value, "findings": shown})
+
+    return stream
+
+
+SHOWN_ITEMS = 1000
+"""Rows the folder-size screen lists. The CSV has every item (docs/design.ja.md §5)."""
+
+
+@dataclass(frozen=True)
+class SizeRow:
+    """One row of the folder-size table.
+
+    Attributes:
+        item: The item.
+        size: The size as the screen writes it.
+        share: The item's percentage of the total, from 0 to 100.
+    """
+
+    item: SizeItem
+    size: str
+    share: float
+
+
+def size_report(result: FolderSizeResult) -> Report:
+    """Build the folder-size result: the first rows with their shares, and the whole CSV."""
+    total = result.total
+    rows = [
+        SizeRow(item, human_size(item.size), 100 * item.size / total if total else 0.0)
+        for item in result.items[:SHOWN_ITEMS]
+    ]
+    csv_href = "data:text/csv;charset=utf-8," + quote(to_csv(result.items))
+    return Report(
+        "tools/folder-size-result.html",
+        {"result": result, "rows": rows, "total": human_size(total), "csv_href": csv_href},
+    )
+
+
+def stream_folder_size(form: Form) -> Stream:
+    """Start a walk from the `folder-size` form. Its one field is `folder`.
+
+    The folder is checked before the run starts. Starting a walk stops the one before it.
+
+    Raises:
+        InputError: The folder is empty, relative, or missing.
+    """
+    stops: list[Cancel] = []
+    values = folder_size(_folder_field(form), cancel=lambda: any(stop() for stop in stops))
+    stops.append(_latest_folder_size.supersede())
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield size_report(value) if isinstance(value, FolderSizeResult) else value
 
     return stream
 
@@ -292,6 +355,7 @@ SCREENS: tuple[Screen, ...] = (
             "kinds": KIND_NAMES,
         },
     ),
+    Screen(FOLDER_SIZE, "tools/folder-size.html", "storage", stream=stream_folder_size),
 )
 """Every screen. A tool row adds its screen here with its registry entry."""
 

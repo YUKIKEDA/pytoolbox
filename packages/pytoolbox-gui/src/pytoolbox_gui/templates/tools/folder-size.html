@@ -1,0 +1,16 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+{#- A walk is heavy: it starts on Start or Enter, not on leaving the field (docs/design.ja.md §5). -#}
+<form class="split" hx-post="/tools/folder-size/runs" hx-target="#folder-size-run">
+  <section class="split-side">
+    <h2><label for="folder-size-folder">Folder</label></h2>
+    <input id="folder-size-folder" class="path-field" name="folder" spellcheck="false"
+           autocomplete="off" placeholder="C:\Users\me" autofocus>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="folder-size-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter a folder and press Start.</p>
+  </section>
+</form>
