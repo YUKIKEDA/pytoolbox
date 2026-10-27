@@ -1,0 +1,17 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+{#- The form of §4.2: it starts on Start or Enter (docs/design.ja.md §5). No min or max on the
+    port, so an out-of-range port gets the server's message, not the browser's. -#}
+<form class="split" hx-post="/tools/udp/runs" hx-target="#udp-run">
+  <section class="split-side">
+    <h2><label for="udp-port">Port</label></h2>
+    <input id="udp-port" class="port-field" name="port" type="number" value="{{ default_port }}"
+           autocomplete="off" autofocus>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="udp-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter a port and press Start.</p>
+  </section>
+</form>

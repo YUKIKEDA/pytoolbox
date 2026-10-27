@@ -16,6 +16,7 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescap
 from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import System, Tool
+from pytoolbox.results import clock
 from pytoolbox_gui import screens
 from pytoolbox_gui.screens import Form, Fragment, Screen, matches
 from pytoolbox_gui.sse import Report, Runs, event_name, format_event
@@ -94,6 +95,7 @@ def create_app(
 
     loaders = [FileSystemLoader(path) for path in [*template_dirs, _PACKAGE / "templates"]]
     env = Environment(loader=ChoiceLoader(loaders), autoescape=select_autoescape())
+    env.filters["clock"] = clock  # pyright: ignore[reportUnknownMemberType] - jinja2 leaves filters' values untyped
     templates = Jinja2Templates(env=env)
 
     def render(fragment: Fragment) -> str:
@@ -181,7 +183,7 @@ def create_app(
             raise InputError(msg)
         stream = screen.stream(await read_form(request))
         run = runs.start(stream)
-        return HTMLResponse(render(Fragment("run.html", {"run_id": run.id})))
+        return HTMLResponse(render(Fragment("run.html", {**screen.context, "run_id": run.id})))
 
     @app.get("/runs/{run_id}/events")
     async def run_events(run_id: str) -> Response:

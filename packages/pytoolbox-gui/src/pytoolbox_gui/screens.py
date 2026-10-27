@@ -3,13 +3,14 @@
 import threading
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 from urllib.parse import quote
 
-from pytoolbox.errors import InputError
-from pytoolbox.registry import FOLDER_SIZE, HARDCODING, REGEX, RESX_COMPARE, TEXT_COUNT, Tool
-from pytoolbox.results import Cancel, Progress
+from pytoolbox.errors import InputError, PytoolboxError
+from pytoolbox.registry import FOLDER_SIZE, HARDCODING, REGEX, RESX_COMPARE, TEXT_COUNT, UDP, Tool
+from pytoolbox.results import Cancel, LogEvent, Progress
 from pytoolbox.tools.dev.hardcoding import (
     DEFAULT_EXCLUDE,
     DEFAULT_EXTENSIONS,
@@ -28,6 +29,9 @@ from pytoolbox.tools.system.folder_size import (
     human_size,
     to_csv,
 )
+from pytoolbox.tools.system.udp import DEFAULT_PORT as UDP_DEFAULT_PORT
+from pytoolbox.tools.system.udp import HOST as UDP_HOST
+from pytoolbox.tools.system.udp import UdpResult, listen_udp
 from pytoolbox.worker import Worker
 from pytoolbox_gui.sse import Report, Stream, Value
 
@@ -340,6 +344,77 @@ def stream_folder_size(form: Form) -> Stream:
     return stream
 
 
+CLOSE_WAIT = 1.0
+"""Seconds a new listener waits for the one before it to close its socket."""
+
+
+class _LatestListener:
+    """Keeps one UDP listener per server: a new one stops the one before and waits for it."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._closed = threading.Event()
+        self._closed.set()
+
+    def replace(self) -> tuple[Cancel, threading.Event]:
+        """Stop the listener before, wait until it closes, and return the next one's flags.
+
+        Returns:
+            The stop check of the next listener, and the event it sets once its socket closes.
+        """
+        with self._lock:
+            self._stop.set()
+            previous = self._closed
+            self._stop = threading.Event()
+            self._closed = threading.Event()
+            stop, closed = self._stop, self._closed
+        previous.wait(CLOSE_WAIT)
+        return stop.is_set, closed
+
+
+_latest_udp = _LatestListener()
+
+
+def stream_udp(form: Form) -> Stream:
+    """Start listening from the `udp` form. Its one field is `port`.
+
+    The port is bound before the run starts. Starting a listener stops the one before it and
+    waits for its socket to close, so the same port can be bound again.
+
+    Raises:
+        InputError: The port is not a whole number, or is outside 1 to 65535.
+        OperationError: The port cannot be bound, for example because it is in use.
+    """
+    text = text_field(form, "port").strip()
+    try:
+        port = int(text)
+    except ValueError:
+        msg = f"Port: enter a whole number, not {text!r}."
+        raise InputError(msg) from None
+    stop, closed = _latest_udp.replace()
+    stops: list[Cancel] = [stop]
+    try:
+        session = listen_udp(port, cancel=lambda: any(check() for check in stops))
+    except PytoolboxError:
+        closed.set()
+        raise
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        try:
+            yield LogEvent(datetime.now(UTC), f"Listening on {UDP_HOST}:{port}")
+            for value in session:
+                if isinstance(value, UdpResult):
+                    yield Report("tools/udp-result.html", {"result": value})
+                else:
+                    yield value
+        finally:
+            closed.set()
+
+    return stream
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(REGEX, "tools/regex.html", "text_asterisk", run=run_regex),
     Screen(TEXT_COUNT, "tools/text-count.html", "text_word_count", run=run_text_count),
@@ -356,6 +431,13 @@ SCREENS: tuple[Screen, ...] = (
         },
     ),
     Screen(FOLDER_SIZE, "tools/folder-size.html", "storage", stream=stream_folder_size),
+    Screen(
+        UDP,
+        "tools/udp.html",
+        "router",
+        stream=stream_udp,
+        context={"default_port": UDP_DEFAULT_PORT, "cancel_label": "Stop"},
+    ),
 )
 """Every screen. A tool row adds its screen here with its registry entry."""
 
