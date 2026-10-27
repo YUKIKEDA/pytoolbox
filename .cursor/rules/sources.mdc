@@ -24,4 +24,14 @@ Later: an experiment shows Ctrl+C does not stop it, and the decision is grilled 
 
 # GOOD
 Agent: sends KeyboardInterrupt to a stuck re match first, sees it run on, and recommends from that
+
+# BAD
+Agent: recommends "pass the .resx bytes to ElementTree; it reads the XML declaration"
+Later: an experiment shows a Shift_JIS declaration raises ValueError, and Q3 is asked again
+
+# GOOD
+Agent: parses UTF-8, UTF-8 with a BOM, UTF-16, and Shift_JIS samples first, and puts
+       the one that fails into the Grill question
 ```
+
+How a library reads its input, such as an encoding or a format, is behavior a recommendation rests on. Check it with the inputs the tool will meet before the question.
