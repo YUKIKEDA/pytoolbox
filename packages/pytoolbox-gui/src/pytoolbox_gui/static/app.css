@@ -16,6 +16,8 @@
   --danger: light-dark(#c42b1c, #ff99a4);
   --hit-odd: light-dark(#cce4f7, #1d4a6b);
   --hit-even: light-dark(#f5dfa8, #5e4a17);
+  --success: light-dark(#0f7b0f, #6ccb5f);
+  --caution: light-dark(#9d5d00, #fce100);
   --console-bg: #0c0c0c;
   --console-text: #cccccc;
   --space: 0.5rem;
@@ -497,6 +499,80 @@ body:has(.sidebar-toggle:checked) .sidebar {
 }
 
 .regex-quiet {
+  color: var(--muted);
+}
+
+.resx-path {
+  width: 100%;
+  font-family: var(--mono);
+}
+
+/* Each status has one color: the count's edge, the row's edge, and the status text. */
+.resx-count-same,
+.resx-row-same {
+  --status: var(--success);
+}
+
+.resx-count-differ,
+.resx-row-differ {
+  --status: var(--danger);
+}
+
+.resx-count-only1,
+.resx-count-only2,
+.resx-row-only1,
+.resx-row-only2 {
+  --status: var(--caution);
+}
+
+#resx-result .counts {
+  grid-template-columns: 1fr 1fr;
+
+  & div {
+    border-left: 4px solid var(--status);
+  }
+}
+
+.resx-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--card);
+
+  & th,
+  & td {
+    padding: var(--space);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  & thead th {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  & tbody th {
+    border-left: 4px solid var(--status);
+    font-weight: normal;
+  }
+
+  & code {
+    font-family: var(--mono);
+  }
+}
+
+.resx-value {
+  white-space: pre-wrap;
+}
+
+.resx-status {
+  color: var(--status);
+  font-weight: 600;
+}
+
+.resx-quiet {
   color: var(--muted);
 }
 

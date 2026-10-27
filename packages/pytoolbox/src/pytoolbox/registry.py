@@ -45,7 +45,14 @@ TEXT_COUNT = Tool(
     "Count characters, characters that are not white space, and half-width characters.",
 )
 
-TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT)
+RESX_COMPARE = Tool(
+    "resx-compare",
+    System.DEVELOPER,
+    "Code",
+    "Compare the data names and values of two .resx files.",
+)
+
+TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

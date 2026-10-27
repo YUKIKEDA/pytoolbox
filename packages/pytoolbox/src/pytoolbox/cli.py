@@ -6,12 +6,14 @@ import json
 import sys
 from collections.abc import Callable, Sequence
 from functools import partial
+from pathlib import Path
 from typing import NoReturn
 
 from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import Tool
 from pytoolbox.tools.dev.regex import Group, Match, match_pattern
+from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
 from pytoolbox.worker import Worker
 
@@ -109,6 +111,28 @@ def format_matches(matches: Sequence[Match]) -> str:
     return "\n".join(lines)
 
 
+def format_resx(entries: Sequence[Entry], *, show_same: bool = False) -> str:
+    """Render a comparison as `pytoolbox resx-compare` prints it.
+
+    Each key is one line: its status, the key, and the two values, separated by two spaces.
+    The key and the values are JSON strings, and a value missing from its file is `null`.
+
+    Args:
+        entries: The comparison, in key order.
+        show_same: Also print the keys whose values match (`--all`).
+
+    Returns:
+        The lines. Empty when nothing is to be printed.
+    """
+    lines: list[str] = []
+    for entry in entries:
+        if entry.status is Status.SAME and not show_same:
+            continue
+        texts = (entry.key, entry.value1, entry.value2)
+        lines.append("  ".join([entry.status, *(json.dumps(t, ensure_ascii=False) for t in texts)]))
+    return "\n".join(lines)
+
+
 def _list(_args: argparse.Namespace) -> int:
     text = format_list(registry.TOOLS)
     if text:
@@ -134,6 +158,13 @@ def _regex(args: argparse.Namespace) -> int:
     )
     with Worker() as worker:
         output = format_matches(worker.call(match))
+    if output:
+        print(output)
+    return 0
+
+
+def _resx_compare(args: argparse.Namespace) -> int:
+    output = format_resx(compare_resx(Path(args.file1), Path(args.file2)), show_same=args.all)
     if output:
         print(output)
     return 0
@@ -180,6 +211,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "-m", "--multiline", action="store_true", help="Let ^ and $ match at line breaks."
     )
     regex.set_defaults(handler=_regex)
+    resx = commands.add_parser(registry.RESX_COMPARE.name, help=registry.RESX_COMPARE.summary)
+    resx.add_argument("file1", help="The first .resx file.")
+    resx.add_argument("file2", help="The second .resx file.")
+    resx.add_argument("--all", action="store_true", help="Also show the keys that match.")
+    resx.set_defaults(handler=_resx_compare)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)

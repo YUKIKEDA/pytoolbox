@@ -3,9 +3,12 @@
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
+from pathlib import Path
 
-from pytoolbox.registry import REGEX, TEXT_COUNT, Tool
+from pytoolbox.errors import InputError
+from pytoolbox.registry import REGEX, RESX_COMPARE, TEXT_COUNT, Tool
 from pytoolbox.tools.dev.regex import Match, match_pattern
+from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
 from pytoolbox.worker import Worker
 from pytoolbox_gui.sse import Stream
@@ -144,9 +147,64 @@ def run_regex(form: Form) -> Fragment:
     )
 
 
+def path_field(form: Form, name: str, label: str) -> Path | None:
+    """Return a path field as an absolute path.
+
+    Surrounding spaces and one pair of surrounding double quotes are dropped; Explorer's
+    "Copy as path" adds the quotes.
+
+    Args:
+        form: The submitted form.
+        name: The field name.
+        label: How the screen names the field, for the error message.
+
+    Returns:
+        The path, or `None` when the field is empty.
+
+    Raises:
+        InputError: The path is relative. The server's working directory is not visible on
+            the screen.
+    """
+    text = text_field(form, name).strip()
+    if len(text) > 1 and text.startswith('"') and text.endswith('"'):
+        text = text[1:-1].strip()
+    if not text:
+        return None
+    path = Path(text)
+    if not path.is_absolute():
+        msg = f"{label}: use an absolute path, not {text}."
+        raise InputError(msg)
+    return path
+
+
+def run_resx_compare(form: Form) -> Fragment:
+    """Compare the `file1` and `file2` fields for the `resx-compare` screen.
+
+    The fragment counts every status and lists the keys that differ. While a path is empty,
+    nothing is compared and the fragment asks for both paths.
+
+    Raises:
+        InputError: A path is relative, or a file is missing or broken.
+        OperationError: A file exists but cannot be read.
+    """
+    path1 = path_field(form, "file1", "File 1")
+    path2 = path_field(form, "file2", "File 2")
+    if path1 is None or path2 is None:
+        return Fragment("tools/resx-compare-result.html", {"counts": None, "differences": ()})
+    entries = compare_resx(path1, path2)
+    counts = dict.fromkeys(Status, 0)
+    for entry in entries:
+        counts[entry.status] += 1
+    differences = [entry for entry in entries if entry.status is not Status.SAME]
+    return Fragment(
+        "tools/resx-compare-result.html", {"counts": counts, "differences": differences}
+    )
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(REGEX, "tools/regex.html", "text_asterisk", run=run_regex),
     Screen(TEXT_COUNT, "tools/text-count.html", "text_word_count", run=run_text_count),
+    Screen(RESX_COMPARE, "tools/resx-compare.html", "branch_compare", run=run_resx_compare),
 )
 """Every screen. A tool row adds its screen here with its registry entry."""
 

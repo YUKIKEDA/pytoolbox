@@ -1,0 +1,36 @@
+{% from "macros.html" import clear_error %}
+{% if counts is defined %}{{ clear_error() }}{% endif %}
+{% set labels = {"same": "Same", "differ": "Different", "only1": "Only in file 1", "only2": "Only in file 2"} %}
+{% macro value(text) -%}
+{%- if text is none %}<span class="resx-quiet">missing</span>
+{%- elif text %}<code class="resx-value">{{ text }}</code>
+{%- else %}<span class="resx-quiet">empty</span>{% endif -%}
+{%- endmacro %}
+<h2>Counts</h2>
+<dl class="counts">
+  {% for status, label in labels.items() %}
+  <div class="resx-count-{{ status }}"><dt>{{ label }}</dt><dd>{{ counts[status] if counts else 0 }}</dd></div>
+  {% endfor %}
+</dl>
+<h2>Differences ({{ differences | default(()) | length }})</h2>
+{% if not counts %}
+<p class="resx-quiet">Enter both paths.</p>
+{% elif differences %}
+<table class="resx-table">
+  <thead>
+    <tr><th scope="col">Key</th><th scope="col">File 1</th><th scope="col">File 2</th><th scope="col">Status</th></tr>
+  </thead>
+  <tbody>
+    {% for entry in differences %}
+    <tr class="resx-row-{{ entry.status }}">
+      <th scope="row"><code>{{ entry.key }}</code></th>
+      <td>{{ value(entry.value1) }}</td>
+      <td>{{ value(entry.value2) }}</td>
+      <td><span class="resx-status">{{ labels[entry.status] }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="resx-quiet">No differences.</p>
+{% endif %}
