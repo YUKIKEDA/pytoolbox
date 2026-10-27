@@ -135,6 +135,8 @@ A tool that writes or deletes takes `--dry-run`, holds a lock on each write targ
 
 Only batch `Progress` and UDP `LogEvent` stream. The CLI writes one line per value to stdout. The GUI sends them over SSE. Other tools return one result. A stream yields only `Progress`, `LogEvent`, and a final `BatchResult`; the GUI ends a run that yields anything else as an unexpected failure.
 
+One exception: `hardcoding` walks a folder and streams. Its library function counts the files first, then yields `Progress` per file, one finding per hit as it is found, and one result last: the count of each kind, the unreadable files as `ItemFailure`, and `cancelled`. Findings are not collected in memory: a large tree had 4 million. The CLI prints each finding as it comes and no progress. The GUI keeps the first 1,000 findings for its table and sends `progress` and the final `result` over SSE, so the GUI's stream values stay `Progress` and a final result. Recorded in [ADR 0013](adr/0013-hardcoding.md).
+
 ### Subprocess
 
 Only the runner starts a process: an external command or a script under `native-scripts/`. It takes an argument list, never a shell string. A script is a tool's implementation. No CLI command or GUI screen runs a script by name or path. On `cancel`, the runner terminates the child and returns with `cancelled=True`. A Python tool runs in process.
@@ -175,6 +177,8 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 `pytoolbox regex PATTERN [TEXT] -g -i -m` prints each match as `N  start-end  <JSON string>`, then each group under it, indented two spaces: `N  start-end  <JSON string>`, or `N name  start-end  <JSON string>` when the group is named, or `N  unmatched` when it took no part in the match. Positions count code points; `end` is exclusive. No matches print nothing and exit `0`. `run` sets stdout and stderr to UTF-8, so a match that is not in the console's code page still prints.
 
 `pytoolbox resx-compare FILE1 FILE2 [--all]` prints one line per key that differs, in key order: `status  <JSON key>  <JSON value 1>  <JSON value 2>`, separated by two spaces. `status` is `differ`, `only1`, or `only2`, and the missing side's value is `null`. `--all` also prints the keys that match, with `same`. Keys sort by code point. Differences still exit `0`. Recorded in [ADR 0011](adr/0011-resx-compare.md).
+
+`pytoolbox hardcoding DIR [--ext EXT] [--exclude NAME] [--kind KIND]` prints one line per finding: `path:line  kind  <JSON string>`, separated by two spaces. `path` is relative to `DIR` with `/` separators, and `kind` is `string`, `number`, `ip`, `url`, or `email`. Each option takes a comma-separated list and can repeat. `--ext` defaults to `.cs,.vb,.js,.py`; the leading `.` is optional and case does not matter. `--exclude` names folders, matched whole, and defaults to `node_modules,bin,obj,.git,.venv`. `--kind` defaults to all five; an unknown kind is `InputError`. Files go in path order, findings in line order, then by position and kind. An unreadable file prints `skipped: path: reason` to stderr. Findings still exit `0`; Ctrl+C exits `130`.
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
