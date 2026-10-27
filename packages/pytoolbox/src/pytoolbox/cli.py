@@ -12,6 +12,14 @@ from typing import NoReturn
 from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import Tool
+from pytoolbox.tools.dev.hardcoding import (
+    DEFAULT_EXCLUDE,
+    DEFAULT_EXTENSIONS,
+    KIND_NAMES,
+    Finding,
+    HardcodingResult,
+    scan_hardcoding,
+)
 from pytoolbox.tools.dev.regex import Group, Match, match_pattern
 from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
@@ -170,6 +178,27 @@ def _resx_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_finding(finding: Finding) -> str:
+    """Render a finding as `pytoolbox hardcoding` prints it: `path:line  kind  "text"`."""
+    return f"{finding.path.as_posix()}:{finding.line}  {finding.kind}  {_quoted(finding.text)}"
+
+
+def _hardcoding(args: argparse.Namespace) -> int:
+    scan = scan_hardcoding(
+        Path(args.folder),
+        extensions=args.ext or DEFAULT_EXTENSIONS,
+        exclude=args.exclude or DEFAULT_EXCLUDE,
+        kinds=args.kind or KIND_NAMES,
+    )
+    for value in scan:
+        if isinstance(value, Finding):
+            print(format_finding(value))
+        elif isinstance(value, HardcodingResult):
+            for failure in value.failures:
+                print(f"skipped: {failure.path.as_posix()}: {failure.message}", file=sys.stderr)
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -216,6 +245,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     resx.add_argument("file2", help="The second .resx file.")
     resx.add_argument("--all", action="store_true", help="Also show the keys that match.")
     resx.set_defaults(handler=_resx_compare)
+    hardcoding = commands.add_parser(registry.HARDCODING.name, help=registry.HARDCODING.summary)
+    hardcoding.add_argument("folder", help="The folder to scan.")
+    hardcoding.add_argument(
+        "--ext",
+        action="append",
+        help=f"File extensions, comma-separated. Default: {','.join(DEFAULT_EXTENSIONS)}.",
+    )
+    hardcoding.add_argument(
+        "--exclude",
+        action="append",
+        help=f"Folder names to skip, comma-separated. Default: {','.join(DEFAULT_EXCLUDE)}.",
+    )
+    hardcoding.add_argument(
+        "--kind",
+        action="append",
+        help=f"Kinds to find, comma-separated: {','.join(KIND_NAMES)}. Default: all.",
+    )
+    hardcoding.set_defaults(handler=_hardcoding)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)

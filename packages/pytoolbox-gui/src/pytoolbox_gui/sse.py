@@ -3,13 +3,28 @@
 import logging
 import queue
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 from uuid import uuid4
 
 from pytoolbox.errors import OperationError, PytoolboxError
 from pytoolbox.results import BatchResult, Cancel, LogEvent, Progress
 
-type Value = Progress | LogEvent | BatchResult
+
+@dataclass(frozen=True)
+class Report:
+    """A final result that is not a batch, drawn by its screen's own template.
+
+    Attributes:
+        template: The template of the `result` event.
+        context: The values the template reads.
+    """
+
+    template: str
+    context: Mapping[str, object] = field(default_factory=dict[str, object])
+
+
+type Value = Progress | LogEvent | BatchResult | Report
 type Stream = Callable[[Cancel], Iterator[Value]]
 """Starts the tool with a cancel check and yields what it reports."""
 
@@ -20,9 +35,11 @@ _logger = logging.getLogger(__name__)
 
 def _checked(value: object) -> Value:
     # Tool code is not bound by the type checker at run time; event_name needs a known type.
-    if isinstance(value, Progress | LogEvent | BatchResult):
+    if isinstance(value, Progress | LogEvent | BatchResult | Report):
         return value
-    msg = f"A stream yielded {type(value).__name__}, not Progress, LogEvent, or BatchResult."
+    msg = (
+        f"A stream yielded {type(value).__name__}, not Progress, LogEvent, BatchResult, or Report."
+    )
     raise TypeError(msg)
 
 
@@ -107,7 +124,7 @@ def event_name(event: Event) -> str:
             return "progress"
         case LogEvent():
             return "log"
-        case BatchResult():
+        case BatchResult() | Report():
             return "result"
         case PytoolboxError():
             return "error"

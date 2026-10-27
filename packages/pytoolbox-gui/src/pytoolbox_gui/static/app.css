@@ -502,7 +502,7 @@ body:has(.sidebar-toggle:checked) .sidebar {
   color: var(--muted);
 }
 
-.resx-path {
+.path-field {
   width: 100%;
   font-family: var(--mono);
 }
@@ -533,7 +533,7 @@ body:has(.sidebar-toggle:checked) .sidebar {
   }
 }
 
-.resx-table {
+.result-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
@@ -563,7 +563,7 @@ body:has(.sidebar-toggle:checked) .sidebar {
   }
 }
 
-.resx-value {
+.result-value {
   white-space: pre-wrap;
 }
 
@@ -572,8 +572,61 @@ body:has(.sidebar-toggle:checked) .sidebar {
   font-weight: 600;
 }
 
-.resx-quiet {
+.quiet {
   color: var(--muted);
+}
+
+/* A row of check boxes, such as the kinds of the hardcoding screen. */
+.check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  & label {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--space) / 2);
+  }
+}
+
+.hardcoding-counts {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+
+  & div {
+    gap: var(--space);
+  }
+}
+
+/* The path and the text get the room; line and kind are short. */
+.hardcoding-table {
+  & th:nth-child(1) {
+    width: 40%;
+  }
+
+  & th:nth-child(2) {
+    width: 4rem;
+  }
+
+  & th:nth-child(3) {
+    width: 5rem;
+  }
+
+  & td:nth-child(2) {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* A run without log lines shows no empty console. */
+.console:empty {
+  display: none;
+}
+
+/* Once the result is in, there is nothing to cancel. */
+.run:has(.run-result:not(:empty)) .run-cancel {
+  display: none;
 }
 
 input,

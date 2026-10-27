@@ -52,7 +52,14 @@ RESX_COMPARE = Tool(
     "Compare the data names and values of two .resx files.",
 )
 
-TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE)
+HARDCODING = Tool(
+    "hardcoding",
+    System.DEVELOPER,
+    "Code",
+    "Find hard-coded strings, numbers, IPs, URLs, and email addresses in a folder's sources.",
+)
+
+TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

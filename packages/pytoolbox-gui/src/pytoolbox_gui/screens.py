@@ -1,17 +1,27 @@
 """The GUI screen of each tool. Every tool in the registry has one."""
 
-from collections.abc import Callable, Mapping, Sequence
+import threading
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 
 from pytoolbox.errors import InputError
-from pytoolbox.registry import REGEX, RESX_COMPARE, TEXT_COUNT, Tool
+from pytoolbox.registry import HARDCODING, REGEX, RESX_COMPARE, TEXT_COUNT, Tool
+from pytoolbox.results import Cancel, Progress
+from pytoolbox.tools.dev.hardcoding import (
+    DEFAULT_EXCLUDE,
+    DEFAULT_EXTENSIONS,
+    KIND_NAMES,
+    Finding,
+    HardcodingResult,
+    scan_hardcoding,
+)
 from pytoolbox.tools.dev.regex import Match, match_pattern
 from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
 from pytoolbox.worker import Worker
-from pytoolbox_gui.sse import Stream
+from pytoolbox_gui.sse import Report, Stream, Value
 
 MATCH_TIMEOUT = 1.0
 """Seconds the regex screen waits for one match (docs/design.ja.md §2)."""
@@ -52,6 +62,7 @@ class Screen:
             under `static/icons/`.
         run: For a tool that returns at once: takes the form, returns the result fragment.
         stream: For a streaming tool: takes the form, returns the stream to run.
+        context: Values the pane template reads besides `tool`, such as field defaults.
     """
 
     tool: Tool
@@ -59,6 +70,7 @@ class Screen:
     icon: str
     run: Callable[[Form], Fragment] | None = None
     stream: Callable[[Form], Stream] | None = None
+    context: Mapping[str, object] = field(default_factory=dict[str, object])
 
 
 def text_field(form: Form, name: str) -> str:
@@ -201,10 +213,85 @@ def run_resx_compare(form: Form) -> Fragment:
     )
 
 
+SHOWN_FINDINGS = 1000
+"""Findings the hardcoding screen lists. Every finding is counted (docs/design.ja.md §5)."""
+
+
+class _LatestScan:
+    """Keeps one hardcoding scan running per server: a new scan stops the one before."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+
+    def supersede(self) -> Cancel:
+        """Stop the scan started before, and return the stop check of the next one."""
+        with self._lock:
+            self._stop.set()
+            self._stop = threading.Event()
+            return self._stop.is_set
+
+
+_latest_scan = _LatestScan()
+
+
+def stream_hardcoding(form: Form) -> Stream:
+    """Start a scan from the `hardcoding` form.
+
+    The fields are `folder`, `extensions`, `exclude`, and one `kind` per checked kind. They
+    are checked before the run starts. Starting a scan stops the one started before it.
+
+    Raises:
+        InputError: The folder is empty, relative, or missing, no extension or kind is given.
+    """
+    folder = path_field(form, "folder", "Folder")
+    if folder is None:
+        msg = "Folder: enter a path."
+        raise InputError(msg)
+    stops: list[Cancel] = []
+
+    def cancelled() -> bool:
+        return any(stop() for stop in stops)
+
+    values = scan_hardcoding(
+        folder,
+        extensions=[text_field(form, "extensions")],
+        exclude=[text_field(form, "exclude")],
+        kinds=form.get("kind", ()),
+        cancel=cancelled,
+    )
+    stops.append(_latest_scan.supersede())
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        shown: list[Finding] = []
+        for value in values:
+            if isinstance(value, Finding):
+                if len(shown) < SHOWN_FINDINGS:
+                    shown.append(value)
+            elif isinstance(value, Progress):
+                yield value
+            elif isinstance(value, HardcodingResult):
+                yield Report("tools/hardcoding-result.html", {"result": value, "findings": shown})
+
+    return stream
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(REGEX, "tools/regex.html", "text_asterisk", run=run_regex),
     Screen(TEXT_COUNT, "tools/text-count.html", "text_word_count", run=run_text_count),
     Screen(RESX_COMPARE, "tools/resx-compare.html", "branch_compare", run=run_resx_compare),
+    Screen(
+        HARDCODING,
+        "tools/hardcoding.html",
+        "document_search",
+        stream=stream_hardcoding,
+        context={
+            "extensions": ", ".join(DEFAULT_EXTENSIONS),
+            "exclude": ", ".join(DEFAULT_EXCLUDE),
+            "kinds": KIND_NAMES,
+        },
+    ),
 )
 """Every screen. A tool row adds its screen here with its registry entry."""
 
