@@ -4,6 +4,7 @@ import io
 import sys
 from collections.abc import Sequence
 from importlib.machinery import ModuleSpec
+from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -111,6 +112,46 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
     assert lines[:2] == ["Developer Utilities", "  Text"]
     assert lines[2].startswith("    regex       ")
     assert lines[3].startswith("    text-count  ")
+    assert lines[4:6] == ["  Code", f"    resx-compare  {registry.RESX_COMPARE.summary}"]
+
+
+def _resx_file(path: Path, *pairs: tuple[str, str]) -> Path:
+    body = "".join(f'<data name="{name}"><value>{value}</value></data>' for name, value in pairs)
+    path.write_text(f'<?xml version="1.0" encoding="utf-8"?><root>{body}</root>', "utf-8")
+    return path
+
+
+def test_resx_compare_prints_the_differences_as_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    first = _resx_file(tmp_path / "1.resx", ("a", "Hi"), ("b", "same"), ("c", 'say "x"'))
+    second = _resx_file(tmp_path / "2.resx", ("a", "日本"), ("b", "same"), ("d", ""))
+
+    assert cli.main(["resx-compare", str(first), str(second)]) == 0
+    assert capsys.readouterr().out == (
+        'differ  "a"  "Hi"  "日本"\nonly1  "c"  "say \\"x\\""  null\nonly2  "d"  null  ""\n'
+    )
+
+
+def test_resx_compare_all_also_prints_the_matches(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    first = _resx_file(tmp_path / "1.resx", ("b", "same"))
+    second = _resx_file(tmp_path / "2.resx", ("b", "same"))
+
+    assert cli.main(["resx-compare", str(first), str(second)]) == 0
+    assert capsys.readouterr().out == ""
+    assert cli.main(["resx-compare", str(first), str(second), "--all"]) == 0
+    assert capsys.readouterr().out == 'same  "b"  "same"  "same"\n'
+
+
+def test_resx_compare_missing_file_exits_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    first = _resx_file(tmp_path / "1.resx")
+
+    assert cli.main(["resx-compare", str(first), str(tmp_path / "none.resx")]) == 1
+    assert capsys.readouterr().err.startswith("error: ")
 
 
 def _stdin(monkeypatch: pytest.MonkeyPatch, data: bytes) -> None:
