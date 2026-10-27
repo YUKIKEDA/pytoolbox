@@ -28,7 +28,7 @@
               ▼ (pytoolbox コア)
        ┌────────────────────────────────────────────────────────┐
        │ 【パス A】Developer Tools (DevToys系)                  │
-       │  ・JSON/YAML整形, Base64, UUID生成, ハッシュ計算等       │
+       │  ・YAML整形, ハッシュ計算, 文字数, 正規表現等            │
        │  ・Pythonインプロセスで超高速実行（入力即レスポンス）    │
        └────────────────────────────────────────────────────────┘
        ┌────────────────────────────────────────────────────────┐
@@ -66,9 +66,9 @@ pytoolbox/
 │   │       ├── db.py              # SQLite履歴保存
 │   │       └── tools/             # 組み込みツール群
 │   │           ├── dev/           # 【DevTools系】Pythonインプロセス関数
-│   │           │   ├── encoders.py (Base64, URL, JWT)
-│   │           │   ├── formatters.py (JSON, YAML, SQL)
-│   │           │   └── generators.py (UUID, パスワード, Hash)
+│   │           │   ├── encoders.py (URL, JWT)
+│   │           │   ├── formatters.py (YAML, SQL)
+│   │           │   └── generators.py (パスワード, Hash)
 │   │           └── system/        # 【SystemTools系】Python実装の管理タスク
 │   │               ├── cleanup.py
 │   │               └── sysinfo.py
@@ -97,13 +97,14 @@ pytoolbox/
 * **UI表現**: 左右（または上下）分割のテキストエリア。「左に入力した瞬間に右へ整形・変換結果が出る」DevToys仕様。
 * **実装例**:
   ```python
-  # packages/pytoolbox/src/pytoolbox/tools/dev/formatters.py
-  import json
-
-  def format_json(text: str, indent: int = 2, sort_keys: bool = False) -> str:
-      """JSON文字列を整形する"""
-      data = json.loads(text)
-      return json.dumps(data, indent=indent, sort_keys=sort_keys, ensure_ascii=False)
+  # packages/pytoolbox/src/pytoolbox/tools/dev/text.py
+  def count_text(text: str) -> TextCount:
+      """文字数を数える"""
+      return TextCount(
+          total=len(text),
+          non_space=sum(not char.isspace() for char in text),
+          half_width=sum(unicodedata.east_asian_width(char) in _HALF_WIDTH for char in text),
+      )
   ```
 
 ### 4.2 System Tools (PC管理系)
@@ -133,9 +134,9 @@ DevToysライクなレイアウトを採用し、左サイドバーで全ツー�
 ### 5.1 サイドバーのカテゴリ構造
 ```text
 ▼ Developer Utilities
-  ├─ Encoders / Decoders (Base64, URL, JWT)
-  ├─ Formatters (JSON, YAML)
-  ├─ Generators (UUID, Hash, Password, CSV 生成, JSON 生成, モック画像)
+  ├─ Encoders / Decoders (URL, JWT)
+  ├─ Formatters (YAML)
+  ├─ Generators (Hash, Password, CSV 生成, JSON 生成, モック画像)
   ├─ Text (Diff, 正規表現テスター, 文字数)
   └─ Code (リソース比較, ハードコーディング検出)
 
@@ -161,7 +162,7 @@ DevToysライクなレイアウトを採用し、左サイドバーで全ツー�
 サーバーは HTML を返す。HTMX が受けて画面の一部を差し替える。JSON を返すデータ API は持たない。プログラムから使う口は CLI とライブラリである。パスはツール名で揃え、系統では分けない。流すかどうかは系統ではなく、ツールの性質で決まるからである。
 
 * **すぐ返すツール**:
-  `POST /tools/json-format` ──▶ 結果の HTML 断片を返す。
+  `POST /tools/regex` ──▶ 結果の HTML 断片を返す。
 * **流すツール（一括処理、UDP 受信）**:
   `POST /tools/cache-clean/runs` ──▶ 実行を始め、実行 ID を埋めた HTML 断片を返す。
   `GET /runs/<id>/events` ──▶ **Server-Sent Events (SSE)** で進捗とログをリアルタイム配信。
@@ -185,8 +186,8 @@ pytoolbox list
 pytoolbox cache-clean temp --dry-run
 
 # 3. Dev系ユーティリティの利用 (パイプ連携対応)
-cat data.json | pytoolbox json-format
-pytoolbox uuid --count 5
+cat notes.txt | pytoolbox text-count
+pytoolbox regex "\d+" "a1b22" -g
 
 # 4. GUIの起動
 pytoolbox gui   # GUI サーバーを立ち上げてブラウザを開く。pytoolbox-gui が無ければ入れ方を示す
@@ -227,10 +228,10 @@ uv tool install ./packages/pytoolbox --with ./packages/pytoolbox-gui
   * CSV 生成、JSON 生成、モック画像、ファイルコピー、フォルダコピー、PDF 分割、ファイル結合、画像クリップ、キャッシュ掃除。
 * [ ] **段 5: システム実行エンジン (Runner)**
   * Subprocess の実行、引数の配列渡しバリデーション。ツールの中身としてのシェルスクリプトの実行。疎通確認。
-* [ ] **段 6: DevTools 系**
-  * JSON 整形、Base64、UUID 生成。
 
 スクリプトの自動検出と、PC ログイン時の常駐は作らない。スクリプトはツールの中身であり、利用者に見せないので、検出して並べる先が無い。常駐は要らない。
+
+JSON 整形、Base64、UUID 生成は作らない。必要ないからである。
 
 ---
 
