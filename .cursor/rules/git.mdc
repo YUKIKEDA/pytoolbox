@@ -15,6 +15,7 @@ When asked about such an operation, answer with the current `HEAD` SHA, the targ
 - Never skip hooks (`--no-verify`) or signing unless the owner orders it.
 - A push that follows a test is chained so a failed test stops the push. On PowerShell 5, `&&` is not available: run the test, then push only when the exit code is 0.
 - A withdrawn prototype's branch stays until the owner names it.
+- An uncommitted change the agent did not make belongs to the owner. Do not commit it with the agent's work, and tell the owner it is there. To branch around it, set it aside with `git stash push -m <what it is> -- <path>` and `git stash pop` it when the work is committed. Do not `restore` or `checkout` it away.
 
 ```text
 # BAD
@@ -22,4 +23,10 @@ Agent: finishes the edits for #11, runs the gates, and asks whether to commit
 
 # GOOD
 Agent: finishes the edits for #11, runs the gates, commits, pushes, and opens the PR
+
+# BAD
+Agent: finds the owner's edit to docs/roadmap.md in the tree and commits it with #34
+
+# GOOD
+Agent: tells the owner, stashes docs/roadmap.md, commits only its own files, and pops it
 ```
