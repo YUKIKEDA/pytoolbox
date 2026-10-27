@@ -63,3 +63,9 @@ class LogEvent:
 
     time: datetime
     message: str
+
+
+def clock(time: datetime) -> str:
+    """Write a log time in the PC's local time with milliseconds, such as `12:34:56.789`."""
+    local = time.astimezone()
+    return f"{local:%H:%M:%S}.{local.microsecond // 1000:03d}"

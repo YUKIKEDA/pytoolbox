@@ -66,7 +66,14 @@ FOLDER_SIZE = Tool(
     "List a folder's direct files and folders, largest first, with each folder's total size.",
 )
 
-TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING, FOLDER_SIZE)
+UDP = Tool(
+    "udp",
+    System.OPERATIONS,
+    "Network",
+    "Listen for UDP datagrams on 0.0.0.0 and log each one's length, hex, and text.",
+)
+
+TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING, FOLDER_SIZE, UDP)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

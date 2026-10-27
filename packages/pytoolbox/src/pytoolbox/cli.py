@@ -12,6 +12,7 @@ from typing import NoReturn
 from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import Tool
+from pytoolbox.results import LogEvent, clock
 from pytoolbox.tools.dev.hardcoding import (
     DEFAULT_EXCLUDE,
     DEFAULT_EXTENSIONS,
@@ -30,6 +31,9 @@ from pytoolbox.tools.system.folder_size import (
     human_size,
     to_csv,
 )
+from pytoolbox.tools.system.udp import DEFAULT_PORT as UDP_DEFAULT_PORT
+from pytoolbox.tools.system.udp import HOST as UDP_HOST
+from pytoolbox.tools.system.udp import listen_udp
 from pytoolbox.worker import Worker
 
 INTERRUPTED = 130
@@ -257,6 +261,16 @@ def _folder_size(args: argparse.Namespace) -> int:
     return 0
 
 
+def _udp(args: argparse.Namespace) -> int:
+    port: int = args.port
+    session = listen_udp(port)
+    print(f"listening on {UDP_HOST}:{port} (Ctrl+C to stop)", file=sys.stderr, flush=True)
+    for value in session:
+        if isinstance(value, LogEvent):
+            print(f"{clock(value.time)}  {value.message}", flush=True)
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -328,6 +342,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--csv", action="store_true", help="Print every item as CSV (UTF-8 with a BOM) instead."
     )
     sizes.set_defaults(handler=_folder_size)
+    udp = commands.add_parser(registry.UDP.name, help=registry.UDP.summary)
+    udp.add_argument(
+        "--port", type=int, default=UDP_DEFAULT_PORT, help=f"Default: {UDP_DEFAULT_PORT}."
+    )
+    udp.set_defaults(handler=_udp)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)
