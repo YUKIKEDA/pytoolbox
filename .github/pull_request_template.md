@@ -33,4 +33,4 @@ N/A
 - [ ] This PR does not leave one path supported and its pair not
 - [ ] Any deferral is a roadmap row that names when, or the item is already under Intentionally out of scope
 - [ ] Docs updated when behavior or workflow changed, or N/A
-- [ ] A bilingual pair (`README`, `docs/roadmap`) was updated on both sides, or N/A
+- [ ] The bilingual pair (`README.md`, `README.ja.md`) was updated on both sides, or N/A
