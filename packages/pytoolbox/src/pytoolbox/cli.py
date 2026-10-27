@@ -23,6 +23,13 @@ from pytoolbox.tools.dev.hardcoding import (
 from pytoolbox.tools.dev.regex import Group, Match, match_pattern
 from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
+from pytoolbox.tools.system.folder_size import (
+    FolderSizeResult,
+    SizeItem,
+    folder_size,
+    human_size,
+    to_csv,
+)
 from pytoolbox.worker import Worker
 
 INTERRUPTED = 130
@@ -199,6 +206,57 @@ def _hardcoding(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_sizes(result: FolderSizeResult, top: int | None = None) -> str:
+    """Render a folder-size result as `pytoolbox folder-size` prints it.
+
+    Args:
+        result: The result.
+        top: Print only the first `top` items, and a line that counts the rest.
+
+    Returns:
+        One `size  kind  name` line per item, then a blank line, the total, and the count of
+        unreadable items when there are any.
+    """
+    shown: Sequence[SizeItem] = result.items[:top] if top else result.items
+    sizes = [human_size(item.size) for item in shown]
+    size_width = max(map(len, sizes), default=0)
+    kind_width = max((len(item.kind) for item in shown), default=0)
+    lines = [
+        f"{size:>{size_width}}  {item.kind:<{kind_width}}  {item.name}"
+        for size, item in zip(sizes, shown, strict=True)
+    ]
+    if hidden := len(result.items) - len(shown):
+        lines.append(f"... {hidden} more")
+    lines += ["", f"total: {human_size(result.total)} ({len(result.items)} items)"]
+    if result.unreadable:
+        lines.append(f"unreadable: {result.unreadable}")
+    if result.cancelled:
+        lines.append("cancelled")
+    return "\n".join(lines).lstrip("\n")
+
+
+def _folder_size(args: argparse.Namespace) -> int:
+    top: int | None = args.top
+    if top is not None and top < 1:
+        msg = "--top must be 1 or more."
+        raise InputError(msg)
+    progress = sys.stderr.isatty()
+    for value in folder_size(Path(args.folder)):
+        if isinstance(value, FolderSizeResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            if args.csv:
+                # Bytes, so Windows text mode does not turn the CSV's CRLF into CR CR LF.
+                sys.stdout.flush()
+                sys.stdout.buffer.write(to_csv(value.items).encode("utf-8"))
+                sys.stdout.buffer.flush()
+            else:
+                print(format_sizes(value, top))
+        elif progress:
+            print(f"\rfolders {value.completed}/{value.total}", end="", file=sys.stderr, flush=True)
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -263,6 +321,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         help=f"Kinds to find, comma-separated: {','.join(KIND_NAMES)}. Default: all.",
     )
     hardcoding.set_defaults(handler=_hardcoding)
+    sizes = commands.add_parser(registry.FOLDER_SIZE.name, help=registry.FOLDER_SIZE.summary)
+    sizes.add_argument("folder", nargs="?", default=".", help="The folder. Default: here.")
+    sizes.add_argument("--top", type=int, metavar="N", help="Print only the largest N items.")
+    sizes.add_argument(
+        "--csv", action="store_true", help="Print every item as CSV (UTF-8 with a BOM) instead."
+    )
+    sizes.set_defaults(handler=_folder_size)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)

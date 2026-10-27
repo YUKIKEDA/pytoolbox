@@ -619,6 +619,59 @@ body:has(.sidebar-toggle:checked) .sidebar {
   }
 }
 
+/* The name gets the room; kind and size are short; the share bar fills its cell. */
+.folder-size-table {
+  & th:nth-child(2) {
+    width: 4rem;
+  }
+
+  & th:nth-child(3) {
+    width: 6rem;
+  }
+
+  & th:nth-child(4) {
+    width: 30%;
+  }
+}
+
+.folder-size-size {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.share {
+  display: grid;
+  grid-template-columns: 1fr 3.5rem;
+  align-items: center;
+  gap: var(--space);
+}
+
+.share-bar {
+  display: block;
+  height: 0.5rem;
+  border-radius: 2px;
+  background: linear-gradient(var(--accent), var(--accent)) no-repeat left / var(--share) 100%,
+    var(--border);
+}
+
+.share-text {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* A link that downloads, drawn like the Start button. */
+.button-link {
+  display: inline-block;
+  padding: calc(var(--space) * 0.75) var(--space);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  text-decoration: none;
+}
+
 /* A run without log lines shows no empty console. */
 .console:empty {
   display: none;

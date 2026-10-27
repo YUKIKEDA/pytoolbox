@@ -14,6 +14,7 @@ from pytoolbox import cli, registry
 from pytoolbox.errors import OperationError
 from pytoolbox.registry import System, Tool
 from pytoolbox.tools.dev.regex import Group, Match
+from pytoolbox.tools.system.folder_size import FolderSizeResult
 
 TOOLS = (
     Tool("text-count", System.DEVELOPER, "Text", "Count characters."),
@@ -117,6 +118,11 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
         f"    resx-compare  {registry.RESX_COMPARE.summary}",
         f"    hardcoding    {registry.HARDCODING.summary}",
     ]
+    assert lines[7:] == [
+        "System Operations",
+        "  Storage",
+        f"    folder-size  {registry.FOLDER_SIZE.summary}",
+    ]
 
 
 def test_hardcoding_prints_findings_and_reports_skipped_files_on_stderr(
@@ -145,6 +151,61 @@ def test_hardcoding_takes_extensions_and_excludes(
     args = ["hardcoding", str(tmp_path), "--ext", "txt", "--exclude", "drop", "--kind", "number"]
     assert cli.main(args) == 0
     assert capsys.readouterr().out == 'keep/a.txt:1  number  "1234"\n'
+
+
+def _sized(root: Path) -> Path:
+    (root / "big").mkdir(parents=True)
+    (root / "big" / "a.bin").write_bytes(b"x" * 2048)
+    (root / "small.txt").write_bytes(b"x" * 10)
+    return root
+
+
+def test_folder_size_prints_the_table_and_the_total(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert cli.main(["folder-size", str(_sized(tmp_path))]) == 0
+    assert capsys.readouterr().out == (
+        "2.0 KB  folder  big\n  10 B  file    small.txt\n\ntotal: 2.0 KB (2 items)\n"
+    )
+
+
+def test_folder_size_top_counts_the_rest(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert cli.main(["folder-size", str(_sized(tmp_path)), "--top", "1"]) == 0
+    assert capsys.readouterr().out.splitlines()[:2] == ["2.0 KB  folder  big", "... 1 more"]
+
+
+def test_folder_size_csv_is_bytes_with_a_bom_and_crlf(
+    tmp_path: Path, capfdbinary: pytest.CaptureFixture[bytes]
+) -> None:
+    assert cli.main(["folder-size", str(_sized(tmp_path)), "--csv", "--top", "1"]) == 0
+    assert capfdbinary.readouterr().out == (
+        b"\xef\xbb\xbfname,kind,bytes,size\r\nbig,folder,2048,2.0 KB\r\nsmall.txt,file,10,10 B\r\n"
+    )
+
+
+def test_folder_size_rejects_a_top_below_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert cli.main(["folder-size", str(tmp_path), "--top", "0"]) == 1
+    assert "--top must be 1 or more." in capsys.readouterr().err
+
+
+def test_folder_size_shows_progress_on_a_terminal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    assert cli.main(["folder-size", str(_sized(tmp_path))]) == 0
+    err = capsys.readouterr().err
+    assert "\rfolders 1/1" in err
+    assert err.endswith("\r\033[K")
+
+
+def test_format_sizes_reports_unreadable_and_cancelled() -> None:
+    result = FolderSizeResult((), unreadable=2, cancelled=True)
+
+    assert cli.format_sizes(result) == "total: 0 B (0 items)\nunreadable: 2\ncancelled"
 
 
 def test_hardcoding_unknown_kind_exits_1(
