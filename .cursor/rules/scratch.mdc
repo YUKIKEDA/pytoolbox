@@ -10,6 +10,7 @@ Remove, in the turn that made them: extra worktrees and checkouts, throwaway pac
 - The checkout that is already open is where edits go.
 - The only paths allowed to stay: `.venv/`, tool caches, and `.dev/` for the owner's local notes (ignored, not tracked).
 - A script that writes scratch stops at its first failed command (`$ErrorActionPreference = 'Stop'` in PowerShell) and names its targets by absolute path.
+- Scratch that holds a link or a junction loses the link first: `[IO.Directory]::Delete(<link>)` in PowerShell removes a junction and nothing it points to. Then the folder is removed. A recursive delete that follows the link can remove what it points to.
 - Long text for `gh` goes through a temporary UTF-8 file that is deleted after the call. Delete it only after the call has returned and the text it wrote reads back non-empty. Never delete it in the same batch of parallel calls.
 
 ```text
@@ -19,4 +20,11 @@ Result: gh reads an empty file and the Issue body is wiped
 
 # GOOD
 Agent: runs `gh issue edit 26 --body-file body.md`, reads the body length back, then removes body.md
+
+# BAD
+Agent: makes sample\shortcut a junction to outside\ and runs Remove-Item -Recurse on sample
+
+# GOOD
+Agent: runs [IO.Directory]::Delete("...\sample\shortcut"), checks outside\ is intact, then
+       removes sample
 ```
