@@ -59,6 +59,12 @@
       {% else %}
       <p class="sidebar-empty sidebar-text">No tools yet.</p>
       {% endfor %}
+      <div class="sidebar-footer">
+        <a class="sidebar-item" href="/history" hx-get="/history" hx-target="#pane"
+           hx-push-url="true" title="Logs &amp; History">
+          {{ icon("history") }}<span class="sidebar-text">Logs &amp; History</span>
+        </a>
+      </div>
     </nav>
     <main class="main">
       <div id="error" class="error-area" aria-live="polite"></div>

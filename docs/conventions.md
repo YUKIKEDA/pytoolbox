@@ -9,6 +9,7 @@ uv workspace. The root project is not published (`tool.uv.package = false`).
 ```text
 packages/pytoolbox/     core library and CLI
   src/pytoolbox/cli.py       `pytoolbox` command: list, gui, one subcommand per tool
+  src/pytoolbox/db.py        HistoryStore, RunRecord, history_path
   src/pytoolbox/errors.py    PytoolboxError, InputError, OperationError
   src/pytoolbox/locks.py     lock_path, target_lock
   src/pytoolbox/registry.py  Tool, System, TOOLS, one constant per tool

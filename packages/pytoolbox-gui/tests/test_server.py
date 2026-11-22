@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from pytoolbox import registry
+from pytoolbox.db import HistoryStore
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import System, Tool
 from pytoolbox.results import BatchResult, Cancel, ItemFailure, LogEvent, Progress
@@ -62,6 +63,7 @@ def client(templates: Path) -> Iterator[TestClient]:
             Screen(BATCH, "batch.html", "home", stream=batch),
         ),
         template_dirs=(templates,),
+        history=HistoryStore(state_root=templates),
     )
     with TestClient(app, base_url="http://127.0.0.1:8000", raise_server_exceptions=False) as test:
         yield test
@@ -124,7 +126,7 @@ def test_shell_icons_are_shipped_with_their_license(client: TestClient) -> None:
 
 
 def test_sidebar_says_there_are_no_tools_for_an_empty_registry(templates: Path) -> None:
-    app = create_app((), (), template_dirs=(templates,))
+    app = create_app((), (), template_dirs=(templates,), history=HistoryStore(state_root=templates))
     with TestClient(app, base_url="http://127.0.0.1:8000") as test:
         html = test.get("/").text
 
@@ -301,8 +303,10 @@ def test_static_assets_are_served(client: TestClient) -> None:
         assert client.get(f"/static/{name}").status_code == 200
 
 
-def test_the_default_app_opens_every_registered_tool() -> None:
-    with TestClient(create_app(), base_url="http://127.0.0.1:8000") as test:
+def test_the_default_app_opens_every_registered_tool(tmp_path: Path) -> None:
+    with TestClient(
+        create_app(history=HistoryStore(state_root=tmp_path)), base_url="http://127.0.0.1:8000"
+    ) as test:
         home = test.get("/").text
         for tool in registry.TOOLS:
             assert f'href="/tools/{tool.name}"' in home

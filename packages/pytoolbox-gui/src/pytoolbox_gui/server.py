@@ -1,8 +1,10 @@
 """The FastAPI app: a hypermedia API that returns HTML for HTMX."""
 
+import json
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs
 
@@ -14,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescape
 
 from pytoolbox import registry
+from pytoolbox.db import DEFAULT_HISTORY_LIMIT, DEFAULT_RECENT_TOOLS, HistoryStore
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import System, Tool
 from pytoolbox.results import clock
@@ -66,12 +69,23 @@ def _sections(tools: Sequence[Tool], by_name: Mapping[str, Screen]) -> Sections:
     }
 
 
+def _local_datetime(value: datetime) -> str:
+    """Format a UTC timestamp in the PC's local time for the history table."""
+    return value.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _pretty_json(value: Mapping[str, object]) -> str:
+    """Format stored run arguments as indented JSON."""
+    return json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True)
+
+
 def create_app(
     tools: Sequence[Tool] = registry.TOOLS,
     all_screens: Sequence[Screen] = screens.SCREENS,
     *,
     port: int = PORT,
     template_dirs: Sequence[Path] = (),
+    history: HistoryStore | None = None,
 ) -> FastAPI:
     """Build the GUI app.
 
@@ -80,6 +94,7 @@ def create_app(
         all_screens: The screens of those tools.
         port: The port the server listens on. `Host` and `Origin` must name it.
         template_dirs: Extra template directories, searched before the package's own.
+        history: Run history database store. Defaults to `<state>/history.sqlite3`.
 
     Returns:
         The app.
@@ -90,12 +105,15 @@ def create_app(
     by_name = _check_screens(tools, all_screens)
     sidebar = _sections(tools, by_name)
     runs = Runs()
+    active_history = HistoryStore() if history is None else history
     hosts = {f"{HOST}:{port}", f"localhost:{port}"}
     origins = {f"http://{host}" for host in hosts}
 
     loaders = [FileSystemLoader(path) for path in [*template_dirs, _PACKAGE / "templates"]]
     env = Environment(loader=ChoiceLoader(loaders), autoescape=select_autoescape())
     env.filters["clock"] = clock  # pyright: ignore[reportUnknownMemberType] - jinja2 leaves filters' values untyped
+    env.filters["local_datetime"] = _local_datetime  # pyright: ignore[reportUnknownMemberType] - jinja2 leaves filters' values untyped
+    env.filters["pretty_json"] = _pretty_json  # pyright: ignore[reportUnknownMemberType] - jinja2 leaves filters' values untyped
     templates = Jinja2Templates(env=env)
 
     def render(fragment: Fragment) -> str:
@@ -153,12 +171,37 @@ def create_app(
 
     @app.get("/")
     async def home(request: Request) -> Response:
-        return page(request, "home.html", sections=sidebar, query="")
+        recent_screens = tuple(
+            by_name[name] for name in active_history.recent_tools(limit=None) if name in by_name
+        )[:DEFAULT_RECENT_TOOLS]
+        return page(
+            request,
+            "home.html",
+            sections=sidebar,
+            recent_screens=recent_screens,
+            query="",
+        )
 
     @app.get("/search")
     async def search(request: Request, q: str = "") -> Response:
         found = _sections([tool for tool in tools if matches(tool, q)], by_name)
-        return page(request, "home.html", sections=found, query=q)
+        return page(request, "home.html", sections=found, recent_screens=(), query=q)
+
+    @app.get("/history")
+    async def history_page(request: Request, tool: str = "") -> Response:
+        selected_tool = tool.strip()
+        recorded_runs = active_history.list_runs(
+            tool=selected_tool or None, limit=DEFAULT_HISTORY_LIMIT
+        )
+        tool_names = active_history.list_tools()
+        return page(
+            request,
+            "history.html",
+            runs=recorded_runs,
+            tools=tool_names,
+            selected_tool=selected_tool,
+            limit=DEFAULT_HISTORY_LIMIT,
+        )
 
     @app.get("/tools/{name}")
     async def tool_page(request: Request, name: str) -> Response:
