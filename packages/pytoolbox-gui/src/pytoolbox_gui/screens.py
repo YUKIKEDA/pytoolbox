@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 from pytoolbox.errors import InputError, PytoolboxError
 from pytoolbox.registry import (
+    CSV_GEN,
     FOLDER_SIZE,
     HARDCODING,
     JSON_GEN,
@@ -21,6 +22,7 @@ from pytoolbox.registry import (
     Tool,
 )
 from pytoolbox.results import Cancel, LogEvent, Progress
+from pytoolbox.tools.dev.csv_gen import DEFAULT_COLUMNS_TEXT, generate_csv, parse_columns
 from pytoolbox.tools.dev.hardcoding import (
     DEFAULT_EXCLUDE,
     DEFAULT_EXTENSIONS,
@@ -439,6 +441,49 @@ def stream_udp(form: Form) -> Stream:
     return stream
 
 
+def run_csv_gen(form: Form, *, state_root: Path | None = None) -> Fragment:
+    """Generate a synthetic CSV file from the `csv-gen` form.
+
+    Raises:
+        InputError: Any field is missing, relative, or invalid, or the target already exists.
+        OperationError: The target is locked or cannot be written.
+    """
+    output = path_field(form, "output", "Output file")
+    if output is None:
+        msg = "Output file: enter a path."
+        raise InputError(msg)
+
+    rows_text = text_field(form, "rows").strip()
+    try:
+        rows = int(rows_text)
+    except ValueError:
+        msg = f"Rows: enter a whole number, not {rows_text!r}."
+        raise InputError(msg) from None
+
+    seed_text = text_field(form, "seed").strip()
+    if not seed_text:
+        seed: int | None = None
+    else:
+        try:
+            seed = int(seed_text)
+        except ValueError:
+            msg = f"Seed: enter a whole number, not {seed_text!r}."
+            raise InputError(msg) from None
+
+    columns = parse_columns(text_field(form, "columns").splitlines())
+    active_state = _state_root.get() if state_root is None else state_root
+    result = generate_csv(
+        output,
+        rows,
+        columns,
+        seed=seed,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+    )
+    return Fragment("tools/csv-gen-result.html", {"result": result})
+
+
 def run_json_gen(form: Form, *, state_root: Path | None = None) -> Fragment:
     """Generate a synthetic JSON array file from the `json-gen` form.
 
@@ -487,6 +532,13 @@ def run_json_gen(form: Form, *, state_root: Path | None = None) -> Fragment:
 
 
 SCREENS: tuple[Screen, ...] = (
+    Screen(
+        CSV_GEN,
+        "tools/csv-gen.html",
+        "table",
+        run=run_csv_gen,
+        context={"default_columns": DEFAULT_COLUMNS_TEXT, "default_rows": 10},
+    ),
     Screen(
         JSON_GEN,
         "tools/json-gen.html",
