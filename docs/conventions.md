@@ -10,8 +10,10 @@ uv workspace. The root project is not published (`tool.uv.package = false`).
 packages/pytoolbox/     core library and CLI
   src/pytoolbox/cli.py       `pytoolbox` command: list, gui, one subcommand per tool
   src/pytoolbox/errors.py    PytoolboxError, InputError, OperationError
-  src/pytoolbox/results.py   Progress, ItemFailure, BatchResult, LogEvent, Cancel
+  src/pytoolbox/locks.py     lock_path, target_lock
   src/pytoolbox/registry.py  Tool, System, TOOLS, one constant per tool
+  src/pytoolbox/results.py   Progress, ItemFailure, BatchResult, LogEvent, Cancel
+  src/pytoolbox/state.py     state_dir: per-user directory for locks and run history
   src/pytoolbox/worker.py    Worker: a process for a call that may never return
   src/pytoolbox/tools/dev/   Developer Utilities (text.py, regex.py, resx.py, hardcoding.py)
   src/pytoolbox/tools/system/  System Operations (folder_size.py, udp.py)
