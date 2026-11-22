@@ -38,6 +38,13 @@ CSV_GEN = Tool(
     "Generate a UTF-8 BOM CSV file from column types and a row count.",
 )
 
+JSON_GEN = Tool(
+    "json-gen",
+    System.DEVELOPER,
+    "Generators",
+    "Generate a UTF-8 JSON array file from property definitions and a row count.",
+)
+
 REGEX = Tool(
     "regex",
     System.DEVELOPER,
@@ -80,7 +87,16 @@ UDP = Tool(
     "Listen for UDP datagrams on 0.0.0.0 and log each one's length, hex, and text.",
 )
 
-TOOLS: tuple[Tool, ...] = (CSV_GEN, REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING, FOLDER_SIZE, UDP)
+TOOLS: tuple[Tool, ...] = (
+    CSV_GEN,
+    JSON_GEN,
+    REGEX,
+    TEXT_COUNT,
+    RESX_COMPARE,
+    HARDCODING,
+    FOLDER_SIZE,
+    UDP,
+)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 
