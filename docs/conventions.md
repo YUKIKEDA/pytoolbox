@@ -57,6 +57,7 @@ Recorded in [docs/adr/0001-toolchain.md](adr/0001-toolchain.md).
 | Tests           | pytest, branch coverage at least 90% (`just coverage`) |
 | GUI tests       | FastAPI `TestClient`, `httpx2` in the dev group        |
 | Images          | Pillow (`pillow>=10.1`, HPND) in `pytoolbox`           |
+| PDFs            | pypdf (`pypdf>=5`, BSD-3-Clause) in `pytoolbox`        |
 | Tasks           | just                                                   |
 
 ## Python
@@ -205,6 +206,14 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 `pytoolbox mock-image OUTPUT_DIR --width W --height H --count N [--random-ratio] [--format png|jpg] [--seed S] [--overwrite] [--dry-run]` generates numbered mock images (`mock_001.png`, etc.) using Pillow, streaming `Progress` and `BatchResult`, locking targets with `target_lock`, and recording non-`--dry-run` runs in `HistoryStore`.
 
 `pytoolbox file-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` and `pytoolbox folder-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` acquire `target_lock` across all expanded targets, stream `Progress` and `BatchResult`, and record non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0018](adr/0018-m4-2-to-m4-5.md).
+
+`pytoolbox pdf-split INPUT OUTPUT_DIR [--format page_{n}.pdf] [--overwrite] [--dry-run]` splits a PDF one page per file with `pypdf`, locking every target path, streaming `Progress` and `BatchResult`, and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox file-merge INPUT [INPUT ...] --output-dir DIR [--sep FMT] [--overwrite] [--dry-run]` merges text files into `merged_YYYYMMDD_HHMMSS.txt` (UTF-8 without BOM, default separator `--- {name} ---`), recording unreadable files both inline in the output and as `ItemFailure`, locking the target, and streaming `Progress` and `BatchResult`.
+
+`pytoolbox image-clip INPUT_DIR --box X1,Y1,X2,Y2 [--output-dir DIR] [--overwrite] [--dry-run]` crops `jpg`, `jpeg`, `png`, `bmp`, and `gif` images under `INPUT_DIR` with Pillow (`quality=95`, clamping outside coordinates, writing `cropped_` to `INPUT_DIR` when `--output-dir` is omitted), locking targets and streaming `Progress` and `BatchResult`.
+
+`pytoolbox cache-clean TARGET [TARGET ...] [--dry-run | --apply]` validates target names upfront, defaults to `--dry-run`, locks target roots and deletes only on `--apply`, streams `Progress` and `BatchResult`, and records `--apply` runs in `HistoryStore`. Recorded in [ADR 0019](adr/0019-m4-6-to-m4-9.md).
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
