@@ -56,6 +56,7 @@ Recorded in [docs/adr/0001-toolchain.md](adr/0001-toolchain.md).
 | Types           | pyright, `standard`                                    |
 | Tests           | pytest, branch coverage at least 90% (`just coverage`) |
 | GUI tests       | FastAPI `TestClient`, `httpx2` in the dev group        |
+| Images          | Pillow (`pillow>=10.1`, HPND) in `pytoolbox`           |
 | Tasks           | just                                                   |
 
 ## Python
@@ -198,6 +199,12 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 `pytoolbox port HOST PORT [--timeout SEC]` opens one TCP connection to measure reachability and round-trip time in milliseconds. Timeout defaults to 3 seconds. Blank hosts, ports outside `1` to `65535`, or invalid timeouts raise `InputError`. A closed or timed-out port prints `closed` and exits `0`.
 
 `pytoolbox csv-gen OUTPUT --rows N --col NAME:TYPE [--col ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (`text`, `number`, `boolean`, `date`) as UTF-8 with a BOM. It locks the output target with `target_lock` and records non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0017](adr/0017-ping-port-and-csv-gen.md).
+
+`pytoolbox json-gen OUTPUT --rows N --schema SCHEMA_OR_JSON [--col NAME:TYPE ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (supporting all 13 schema types in §9) as a UTF-8 JSON array without a BOM, holding `target_lock` on `OUTPUT` and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox mock-image OUTPUT_DIR --width W --height H --count N [--random-ratio] [--format png|jpg] [--seed S] [--overwrite] [--dry-run]` generates numbered mock images (`mock_001.png`, etc.) using Pillow, streaming `Progress` and `BatchResult`, locking targets with `target_lock`, and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox file-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` and `pytoolbox folder-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` acquire `target_lock` across all expanded targets, stream `Progress` and `BatchResult`, and record non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0018](adr/0018-m4-2-to-m4-5.md).
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 

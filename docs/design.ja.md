@@ -136,6 +136,9 @@ DevToysライクなレイアウトを採用し、左サイドバーで全ツー�
 * **実行履歴の画面（Logs & History）**: 新しい順で直近 200 件を表で出す。列は日時（PC の地域の時刻）、ツール名、状態（成功、一部失敗、失敗、キャンセル）、成功・失敗件数、要約とし、ツール名で絞り込める。引数 JSON とエラー全文は各行内の折り畳み（`<details>`）で開き、一覧を消す操作（Clear ボタン）は置かない。監査の記録として残し、過去の失敗を後から追えるようにするためである。
 * **疎通確認（`ping` / `port`）の画面**: `ping` と `port` を別画面に分ける。`ping` は左にホスト名、タイムアウト（秒、既定 3）、Start ボタンを置き、Start か Enter で実行して右に到達可否・応答時間・出力を出す。`port` は左にホスト名、ポート（1〜65535）、タイムアウト（秒、既定 3）、Start ボタンを置き、右に開閉・応答時間（ms）を出す。どちらも即時応答フォームである。
 * **CSV 生成の画面**: 左に出力ファイルのパス、行数、シード（任意）、列定義（1 行 1 列で `name:type`、既定は 4 種類の見本入り）、Dry-run・Overwrite チェックボックス、Start ボタンを置き、右に生成結果（`--dry-run` 時は予定パスと行数、実行時は書き先パスと行数）を出す。
+* **JSON 生成の画面**: 左に出力ファイルのパス、行数、シード（任意）、JSON スキーマ定義（既定の見本入り）、Dry-run・Overwrite チェックボックス、Start ボタンを置き、右に書き先または予定パスと件数を出す。
+* **モック画像の画面**: 左に出力フォルダ、幅、高さ、枚数、ランダム比率チェックボックス、画像形式（PNG / JPEG）、シード（任意）、Dry-run・Overwrite チェックボックス、Start ボタンを置き、右に動いている間は進み具合と Cancel、終わったら書き先一覧と失敗件数を出す。
+* **ファイルコピー・フォルダコピーの画面**: 左に元のファイル（またはフォルダ）パス、出力先フォルダ、ファイル名（またはフォルダ名）の書式、開始番号、件数、Dry-run・Overwrite チェックボックス、Start ボタンを置き、右に進み具合と Cancel、終わったら処理した一覧と失敗件数を出す。
 * PowerToys のモジュールごとのオン・オフとショートカットキーは持たない。ツールに有効・無効は無く、常駐もしないので、ショートカットキーは効かない。
 
 ### 5.1 サイドバーのカテゴリ構造
@@ -259,10 +262,10 @@ JSON 整形、Base64、UUID 生成は作らない。必要ないからである�
 | 疎通確認 | `ping` を1回送る。TCP ポートへ接続し、開閉と応答時間を返す | PyDevToys。引数は配列渡し | `ping` と `port` の 2 コマンドに分ける。タイムアウト既定は 3 秒（`--timeout`）。到達不可・ポート閉は診断結果として終了コード 0。空ホスト名・範囲外ポート（1〜65535 外）・無効タイムアウトは `InputError`（1）。コマンド起動失敗などは `OperationError`（2）。`ping` は `runner` 経由で 1 回送る |
 | フォルダサイズ | 直下のファイルとフォルダを大きい順に出す。フォルダは中身の合計。リンクとジャンクションは追わない。読めない項目は件数だけ報告する。`--top` は表示件数、CSV は全件、UTF-8 BOM | FolderSizer。PyDevToys には無い | 大きさは論理サイズ（エクスプローラーの「サイズ」）で、1024 刻みの B、KB、MB、GB、TB。直下のリンクとジャンクションはサイズ 0 の `link` の行で出す。直下のフォルダを 1 つ終えるごとに進み具合を流す。止めたら、走査を終えたフォルダと直下のファイルだけを出す。道具はファイルを書かない。CLI の `--csv` は表の代わりに CSV を標準出力に出し、GUI は結果に CSV を埋め込んでブラウザに保存させる。書く道具の安全策（段 3）が要らず、読むだけの段 2 に置ける。CSV の列は `name,kind,bytes,size`。`FOLDER` を省くと今いるフォルダ |
 | CSV 生成 | 列の型（text, number, boolean, date）と行数から CSV を書く | PyDevToys | 種は任意。Excel 向けなので BOM 付き。CLI は `OUTPUT --rows N --col NAME:TYPE [...] [--seed S] [--overwrite] [--dry-run]`。書き先に排他ロックを掛け、非 `--dry-run` は履歴へ残す |
-| JSON 生成 | プロパティ定義と件数から JSON を書く。型は string, number, boolean, date, email, uuid, url, ip, path, array, object, date_range, custom_list | PyDevToys | 種は任意 |
-| モック画像 | 幅、高さ、枚数、出力先から、寸法を描いた画像を書く。比率をランダムにする指定がある | PyDevToys | 種は任意 |
-| ファイルコピー | 同じ内容を、書式で連番にした名前で複数書く | PyDevToys | 無し |
-| フォルダコピー | フォルダを、名前と番号の書式で複数コピーする | PyDevToys | 無し |
+| JSON 生成 | プロパティ定義と件数から JSON を書く。型は string, number, boolean, date, email, uuid, url, ip, path, array, object, date_range, custom_list | PyDevToys | 種は任意。UTF-8（BOM なし）の JSON 配列で書く。CLI は `OUTPUT --rows N --schema SCHEMA_OR_JSON [--col NAME:TYPE ...] [--seed S] [--overwrite] [--dry-run]`。書き先に排他ロックを掛け、非 `--dry-run` は履歴へ残す |
+| モック画像 | 幅、高さ、枚数、出力先から、寸法を描いた画像を書く。比率をランダムにする指定がある | PyDevToys | 種は任意。依存は `pillow>=10.1`（HPND）。CLI は `OUTPUT_DIR --width W --height H --count N [--random-ratio] [--format png|jpg] [--seed S] [--overwrite] [--dry-run]`。`mock_001.png` 等の連番を出力し、`--random-ratio` 時は指定寸法を上限範囲として比率をランダム化する。複数枚時は `Progress` と `BatchResult` を流し、書き先ロックと非 `--dry-run` の履歴記録を行う |
+| ファイルコピー | 同じ内容を、書式で連番にした名前で複数書く | PyDevToys | `--format`（既定 `{stem}_{n:03d}{suffix}`）・`--start`（既定 1）・`--count N`・`--overwrite`・`--dry-run` を受け取り、展開先の全書き先へ一括ロックを掛けて `Progress` と `BatchResult` を流す。非 `--dry-run` は履歴へ残す |
+| フォルダコピー | フォルダを、名前と番号の書式で複数コピーする | PyDevToys | `--format`（既定 `{name}_{n:03d}`）・`--start`（既定 1）・`--count N`・`--overwrite`・`--dry-run` を受け取り、展開先の全書き先へ一括ロックを掛けて `Progress` と `BatchResult` を流す。非 `--dry-run` は履歴へ残す |
 | PDF 分割 | PDF を1ページずつ `page_N.pdf` として書く | PDFDivider と PyDevToys | 無し |
 | ファイル結合 | 選んだテキストを、区切り付きで1つの `.txt` に書く。読めないファイルはその旨を書く | FileMergerGUI と PyDevToys | 名前は `merged_YYYYMMDD_HHMMSS.txt` |
 | 画像クリップ | プレビューで範囲を選び、フォルダ内の jpg, jpeg, png, bmp, gif を、その矩形で切り、`cropped_` を付けて書く。元フォルダへ書く選択がある。JPEG 品質 95 | PyImageCripper と PyDevToys | 矩形は画像のピクセル座標。画像の外は丸める |
