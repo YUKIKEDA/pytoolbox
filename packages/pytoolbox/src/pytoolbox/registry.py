@@ -31,6 +31,13 @@ class Tool:
     summary: str
 
 
+CSV_GEN = Tool(
+    "csv-gen",
+    System.DEVELOPER,
+    "Generators",
+    "Generate a UTF-8 BOM CSV file from column types and a row count.",
+)
+
 REGEX = Tool(
     "regex",
     System.DEVELOPER,
@@ -73,7 +80,7 @@ UDP = Tool(
     "Listen for UDP datagrams on 0.0.0.0 and log each one's length, hex, and text.",
 )
 
-TOOLS: tuple[Tool, ...] = (REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING, FOLDER_SIZE, UDP)
+TOOLS: tuple[Tool, ...] = (CSV_GEN, REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING, FOLDER_SIZE, UDP)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

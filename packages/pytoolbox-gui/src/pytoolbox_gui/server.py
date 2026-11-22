@@ -214,8 +214,17 @@ def create_app(
         if screen.run is None:
             msg = f"{name} streams. Start it at /tools/{name}/runs."
             raise InputError(msg)
+        run_screen = screen.run
         form = await read_form(request)
-        fragment = await run_in_threadpool(screen.run, form)
+
+        def execute() -> Fragment:
+            token = screens.set_state_root(active_history.path.parent)
+            try:
+                return run_screen(form)
+            finally:
+                screens.reset_state_root(token)
+
+        fragment = await run_in_threadpool(execute)
         return HTMLResponse(render(fragment))
 
     @app.post("/tools/{name}/runs")
