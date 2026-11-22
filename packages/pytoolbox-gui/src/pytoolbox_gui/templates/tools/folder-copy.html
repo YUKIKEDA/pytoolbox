@@ -1,0 +1,39 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/folder-copy/runs" hx-target="#folder-copy-run">
+  <section class="split-side">
+    <h2><label for="folder-copy-source">Source folder</label></h2>
+    <input id="folder-copy-source" class="path-field" name="source" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\source" autofocus>
+    <h2><label for="folder-copy-dest">Destination folder</label></h2>
+    <input id="folder-copy-dest" class="path-field" name="dest_dir" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\dest">
+    <h2><label for="folder-copy-format">Folder name format</label></h2>
+    <input id="folder-copy-format" class="path-field" name="format" spellcheck="false"
+           autocomplete="off" value="{{ default_format }}">
+    <p class="quiet">Placeholders: <code>{name}</code> (source folder name), <code>{n}</code> (number).</p>
+    <div class="field-row">
+      <div>
+        <h2><label for="folder-copy-start">Start</label></h2>
+        <input id="folder-copy-start" class="port-field" type="number" name="start"
+               value="{{ default_start }}">
+      </div>
+      <div>
+        <h2><label for="folder-copy-count">Count</label></h2>
+        <input id="folder-copy-count" class="port-field" type="number" name="count"
+               value="{{ default_count }}">
+      </div>
+    </div>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing folders</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="folder-copy-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter source and destination paths, then press Start.</p>
+  </section>
+</form>

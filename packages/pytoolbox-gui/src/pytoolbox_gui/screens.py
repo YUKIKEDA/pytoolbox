@@ -13,6 +13,7 @@ from pytoolbox.errors import InputError, PytoolboxError
 from pytoolbox.registry import (
     CACHE_CLEAN,
     CSV_GEN,
+    FOLDER_COPY,
     FOLDER_SIZE,
     HARDCODING,
     JSON_GEN,
@@ -40,6 +41,8 @@ from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
 from pytoolbox.tools.system import network
 from pytoolbox.tools.system.cleanup import CacheCleanResult, clean_caches
+from pytoolbox.tools.system.folder_copy import DEFAULT_FORMAT as FOLDER_COPY_DEFAULT_FORMAT
+from pytoolbox.tools.system.folder_copy import FolderCopyResult, copy_folder_batch
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -630,6 +633,75 @@ def run_json_gen(form: Form, *, state_root: Path | None = None) -> Fragment:
     return Fragment("tools/json-gen-result.html", {"result": result})
 
 
+def _whole_number(form: Form, name: str, label: str, *, default: int | None = None) -> int:
+    if name not in form and default is not None:
+        return default
+    text = text_field(form, name).strip()
+    try:
+        return int(text)
+    except ValueError:
+        msg = f"{label}: enter a whole number, not {text!r}."
+        raise InputError(msg) from None
+
+
+def folder_copy_report(result: FolderCopyResult) -> Report:
+    """Build the folder-copy result fragment with the first planned or copied paths."""
+    shown_items = result.items[:SHOWN_ITEMS]
+    return Report(
+        "tools/folder-copy-result.html",
+        {"result": result, "shown_items": shown_items},
+    )
+
+
+def stream_folder_copy(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start a batch folder copy from the `folder-copy` form.
+
+    Paths, format, numbering, and overwrite rules are validated before the run starts.
+
+    Args:
+        form: Submitted form fields (`source`, `dest_dir`, `format`, `start`, `count`,
+            `overwrite`, and `dry_run`).
+        state_root: State directory override. Defaults to the request-bound state root.
+
+    Returns:
+        The SSE stream yielding `Progress` and the final `Report`.
+
+    Raises:
+        InputError: Any field is missing, relative, or invalid, or a target already exists.
+    """
+    source = path_field(form, "source", "Source folder")
+    if source is None:
+        msg = "Source folder: enter a path."
+        raise InputError(msg)
+    dest_dir = path_field(form, "dest_dir", "Destination folder")
+    if dest_dir is None:
+        msg = "Destination folder: enter a path."
+        raise InputError(msg)
+    fmt = text_field(form, "format") if "format" in form else FOLDER_COPY_DEFAULT_FORMAT
+    start = _whole_number(form, "start", "Start number", default=1)
+    count = _whole_number(form, "count", "Count")
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = copy_folder_batch(
+        source,
+        dest_dir,
+        count,
+        fmt=fmt,
+        start=start,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield folder_copy_report(value) if isinstance(value, FolderCopyResult) else value
+
+    return stream
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(
         CSV_GEN,
@@ -657,6 +729,17 @@ SCREENS: tuple[Screen, ...] = (
             "extensions": ", ".join(DEFAULT_EXTENSIONS),
             "exclude": ", ".join(DEFAULT_EXCLUDE),
             "kinds": KIND_NAMES,
+        },
+    ),
+    Screen(
+        FOLDER_COPY,
+        "tools/folder-copy.html",
+        "folder_add",
+        stream=stream_folder_copy,
+        context={
+            "default_format": FOLDER_COPY_DEFAULT_FORMAT,
+            "default_start": 1,
+            "default_count": 3,
         },
     ),
     Screen(FOLDER_SIZE, "tools/folder-size.html", "storage", stream=stream_folder_size),

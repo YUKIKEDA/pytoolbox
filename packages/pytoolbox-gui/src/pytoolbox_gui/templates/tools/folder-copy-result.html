@@ -1,0 +1,41 @@
+{% set failed_count = result.batch.failures | length %}
+<p>
+  {% if result.dry_run %}
+  Dry-run: {{ result.batch.succeeded }} folders planned{% if failed_count %}, {{ failed_count }} failed{% endif %}{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% else %}
+  Copied {{ result.batch.succeeded }} folders, {{ failed_count }} failed{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% endif %}
+</p>
+<dl class="counts folder-copy-counts">
+  <div><dt>Mode</dt><dd>{% if result.dry_run %}Dry-run{% else %}Copied{% endif %}</dd></div>
+  <div><dt>Succeeded</dt><dd>{{ result.batch.succeeded }}</dd></div>
+  <div><dt>Failed</dt><dd>{{ failed_count }}</dd></div>
+</dl>
+{% if shown_items %}
+{% if result.items | length > shown_items | length %}
+<p class="quiet">Showing {{ shown_items | length }} of {{ result.items | length }} folders. Use <code>pytoolbox folder-copy</code> for all.</p>
+{% endif %}
+<table class="result-table folder-copy-table">
+  <thead>
+    <tr><th scope="col">#</th><th scope="col">Target folder</th></tr>
+  </thead>
+  <tbody>
+    {% for path in shown_items %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td><code>{{ path }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="quiet">No folders {% if result.dry_run %}planned{% else %}copied{% endif %}.</p>
+{% endif %}
+{% if result.batch.failures %}
+<h2>Failed ({{ failed_count }})</h2>
+<ul class="failures">
+  {% for failure in result.batch.failures %}
+  <li><code>{{ failure.path }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

@@ -938,3 +938,32 @@ button {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 2);
+
+  & > div {
+    display: grid;
+    gap: var(--space);
+  }
+}
+
+.folder-copy-counts {
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+
+  & div {
+    gap: var(--space);
+  }
+}
+
+.folder-copy-table {
+  & th:nth-child(1) {
+    width: 3.5rem;
+  }
+
+  & td:nth-child(1) {
+    font-variant-numeric: tabular-nums;
+  }
+}
