@@ -15,6 +15,8 @@ from pytoolbox.registry import (
     FOLDER_SIZE,
     HARDCODING,
     JSON_GEN,
+    PING,
+    PORT,
     REGEX,
     RESX_COMPARE,
     TEXT_COUNT,
@@ -35,6 +37,7 @@ from pytoolbox.tools.dev.json_gen import DEFAULT_SCHEMA_TEXT, generate_json, loa
 from pytoolbox.tools.dev.regex import Match, match_pattern
 from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
+from pytoolbox.tools.system import network
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -42,6 +45,7 @@ from pytoolbox.tools.system.folder_size import (
     human_size,
     to_csv,
 )
+from pytoolbox.tools.system.network import DEFAULT_TIMEOUT as NETWORK_DEFAULT_TIMEOUT
 from pytoolbox.tools.system.udp import DEFAULT_PORT as UDP_DEFAULT_PORT
 from pytoolbox.tools.system.udp import HOST as UDP_HOST
 from pytoolbox.tools.system.udp import UdpResult, listen_udp
@@ -402,6 +406,52 @@ class _LatestListener:
 _latest_udp = _LatestListener()
 
 
+def _port_field(form: Form) -> int:
+    text = text_field(form, "port").strip()
+    try:
+        return int(text)
+    except ValueError:
+        msg = f"Port: enter a whole number, not {text!r}."
+        raise InputError(msg) from None
+
+
+def _timeout_field(form: Form) -> float:
+    if "timeout" not in form:
+        return NETWORK_DEFAULT_TIMEOUT
+    text = text_field(form, "timeout").strip()
+    try:
+        return float(text)
+    except ValueError:
+        msg = f"Timeout: enter a number of seconds, not {text!r}."
+        raise InputError(msg) from None
+
+
+def run_ping(form: Form) -> Fragment:
+    """Send one ICMP echo from the `ping` form.
+
+    Raises:
+        InputError: The host is empty or contains whitespace, or the timeout is invalid.
+        OperationError: Starting or running `ping` failed.
+    """
+    host = text_field(form, "host").strip()
+    timeout = _timeout_field(form)
+    result = network.ping_host(host, timeout=timeout)
+    return Fragment("tools/ping-result.html", {"result": result})
+
+
+def run_port(form: Form) -> Fragment:
+    """Check one TCP port from the `port` form.
+
+    Raises:
+        InputError: The host, port, or timeout is invalid.
+    """
+    host = text_field(form, "host").strip()
+    port = _port_field(form)
+    timeout = _timeout_field(form)
+    result = network.check_port(host, port, timeout=timeout)
+    return Fragment("tools/port-result.html", {"result": result})
+
+
 def stream_udp(form: Form) -> Stream:
     """Start listening from the `udp` form. Its one field is `port`.
 
@@ -412,12 +462,7 @@ def stream_udp(form: Form) -> Stream:
         InputError: The port is not a whole number, or is outside 1 to 65535.
         OperationError: The port cannot be bound, for example because it is in use.
     """
-    text = text_field(form, "port").strip()
-    try:
-        port = int(text)
-    except ValueError:
-        msg = f"Port: enter a whole number, not {text!r}."
-        raise InputError(msg) from None
+    port = _port_field(form)
     stop, closed = _latest_udp.replace()
     stops: list[Cancel] = [stop]
     try:
@@ -561,6 +606,20 @@ SCREENS: tuple[Screen, ...] = (
         },
     ),
     Screen(FOLDER_SIZE, "tools/folder-size.html", "storage", stream=stream_folder_size),
+    Screen(
+        PORT,
+        "tools/port.html",
+        "plug_connected",
+        run=run_port,
+        context={"default_timeout": f"{NETWORK_DEFAULT_TIMEOUT:g}"},
+    ),
+    Screen(
+        PING,
+        "tools/ping.html",
+        "pulse",
+        run=run_ping,
+        context={"default_timeout": f"{NETWORK_DEFAULT_TIMEOUT:g}"},
+    ),
     Screen(
         UDP,
         "tools/udp.html",

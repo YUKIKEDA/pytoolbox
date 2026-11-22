@@ -80,6 +80,20 @@ FOLDER_SIZE = Tool(
     "List a folder's direct files and folders, largest first, with each folder's total size.",
 )
 
+PORT = Tool(
+    "port",
+    System.OPERATIONS,
+    "Network",
+    "Check whether a host's TCP port is open and measure its response time.",
+)
+
+PING = Tool(
+    "ping",
+    System.OPERATIONS,
+    "Network",
+    "Send one ICMP echo to a host and report reachability and round-trip time.",
+)
+
 UDP = Tool(
     "udp",
     System.OPERATIONS,
@@ -95,6 +109,8 @@ TOOLS: tuple[Tool, ...] = (
     RESX_COMPARE,
     HARDCODING,
     FOLDER_SIZE,
+    PORT,
+    PING,
     UDP,
 )
 """Every tool, in sidebar order. A tool row adds its entry here."""

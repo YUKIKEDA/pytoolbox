@@ -1,0 +1,23 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+{#- Immediate POST form: starts on Start or Enter. No min/max/required so invalid inputs reach the
+    server and show #error (docs/design.ja.md §5). -#}
+<form class="split" hx-post="/tools/port" hx-target="#port-result" hx-sync="this:replace">
+  <section class="split-side">
+    <h2><label for="port-host">Host</label></h2>
+    <input id="port-host" class="path-field" name="host" spellcheck="false" autocomplete="off"
+           placeholder="127.0.0.1" autofocus>
+    <h2><label for="port-number">Port</label></h2>
+    <input id="port-number" class="port-field" name="port" type="number" autocomplete="off"
+           placeholder="443">
+    <h2><label for="port-timeout">Timeout (seconds)</label></h2>
+    <input id="port-timeout" class="port-field" name="timeout" type="number" step="any"
+           value="{{ default_timeout }}" autocomplete="off">
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="port-result" class="split-side tool-result" aria-live="polite">
+    {%- include "tools/port-result.html" -%}
+  </section>
+</form>

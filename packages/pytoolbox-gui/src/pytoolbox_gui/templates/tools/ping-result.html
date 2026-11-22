@@ -1,0 +1,23 @@
+{% from "macros.html" import clear_error %}
+{% if result is defined %}{{ clear_error() }}{% endif %}
+<h2>Result</h2>
+{% if result is defined %}
+<dl class="counts">
+  <div class="{{ 'status-ok' if result.reachable else 'status-bad' }}">
+    <dt>Status</dt>
+    <dd>{{ "Reachable" if result.reachable else "Unreachable" }}</dd>
+  </div>
+  <div>
+    <dt>Latency</dt>
+    <dd>{{ "%.1f ms" | format(result.latency_ms) if result.latency_ms is not none else "—" }}</dd>
+  </div>
+</dl>
+<h2>Output</h2>
+{% if result.output %}
+<pre class="network-output">{{ result.output }}</pre>
+{% else %}
+<p class="quiet">No output.</p>
+{% endif %}
+{% else %}
+<p class="quiet">Enter a host and press Start.</p>
+{% endif %}
