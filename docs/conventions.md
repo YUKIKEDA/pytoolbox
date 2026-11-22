@@ -14,7 +14,7 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/registry.py  Tool, System, TOOLS, one constant per tool
   src/pytoolbox/worker.py    Worker: a process for a call that may never return
   src/pytoolbox/tools/dev/   Developer Utilities (text.py, regex.py, resx.py, hardcoding.py)
-  src/pytoolbox/tools/system/  System Operations (folder_size.py)
+  src/pytoolbox/tools/system/  System Operations (folder_size.py, udp.py)
 packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
   src/pytoolbox_gui/server.py   create_app(): routes, Host and Origin guard, errors
@@ -140,7 +140,7 @@ One exception: `hardcoding` walks a folder and streams. Its library function cou
 
 `folder-size` also walks a folder and streams. Its library function lists the folder's direct items, then sums each direct folder in turn and yields `Progress` after each one, and one result last: the items, largest first, the count of unreadable items, and `cancelled`. A cancelled result holds only the direct files, links, and the folders that were summed whole. The CLI writes progress to stderr when it is a terminal. The GUI shows the first 1,000 rows and sends the result as a `Report`. Starting a folder-size run in the GUI stops the one before it, as `hardcoding` does. Recorded in [ADR 0014](adr/0014-folder-size.md).
 
-`udp` is a session. Its library function binds `0.0.0.0:<port>` when called, so a port out of range (`InputError`) or one it cannot bind (`OperationError`) fails before anything streams. The returned iterator receives into a 65,535-byte buffer, yields one `LogEvent` per datagram, checks `cancel` at least every 0.2 seconds through a socket timeout, closes the socket, and yields the count of datagrams last. The GUI sends each line as a `log` event and the count as a `Report`. Starting a listener in the GUI stops the one before it, so a forgotten listener does not hold the port. Recorded in [ADR 0015](adr/0015-udp.md).
+`udp` is a session. Its library function binds `0.0.0.0:<port>` when called, so a port out of range (`InputError`) or one it cannot bind (`OperationError`) fails before anything streams. The bind error names its reason in English (`the port is in use`, `access to the port is denied`), because Windows words `strerror` in the PC's language. The returned iterator receives into a 65,535-byte buffer, yields one `LogEvent` per datagram, checks `cancel` at least every 0.2 seconds through a socket timeout, closes the socket, and yields the count of datagrams last. The GUI sends each line as a `log` event and the count as a `Report`. Starting a listener in the GUI stops the one before it and waits up to 1 second for its socket to close, so a forgotten listener does not hold the port and the same port can be started again. The GUI's first log line is `Listening on 0.0.0.0:<port>`, and its cancel button reads `Stop` (`cancel_label` in `Screen.context`, which `run.html` also reads). Recorded in [ADR 0015](adr/0015-udp.md).
 
 ### Subprocess
 

@@ -14,6 +14,7 @@ from pytoolbox import cli, registry
 from pytoolbox.errors import OperationError
 from pytoolbox.registry import System, Tool
 from pytoolbox.tools.dev.regex import Group, Match
+from pytoolbox.tools.system import udp
 from pytoolbox.tools.system.folder_size import FolderSizeResult
 
 TOOLS = (
@@ -122,6 +123,8 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
         "System Operations",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
+        "  Network",
+        f"    udp  {registry.UDP.summary}",
     ]
 
 
@@ -206,6 +209,47 @@ def test_format_sizes_reports_unreadable_and_cancelled() -> None:
     result = FolderSizeResult((), unreadable=2, cancelled=True)
 
     assert cli.format_sizes(result) == "total: 0 B (0 items)\nunreadable: 2\ncancelled"
+
+
+class _OneDatagram:
+    """A socket that receives one datagram and then has Ctrl+C pressed."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def bind(self, address: tuple[str, int], /) -> None:
+        self.address = address
+
+    def settimeout(self, value: float | None, /) -> None:
+        self.timeout = value
+
+    def recvfrom(self, bufsize: int, /) -> tuple[bytes, tuple[str, int]]:
+        self.calls += 1
+        if self.calls == 1:
+            return b"Hi", ("127.0.0.1", 5000)
+        raise KeyboardInterrupt
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_udp_logs_each_datagram_and_exits_130_on_ctrl_c(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    sock = _OneDatagram()
+    monkeypatch.setattr(udp, "udp_socket", lambda: sock)
+
+    assert cli.main(["udp", "--port", "9100"]) == cli.INTERRUPTED
+    captured = capsys.readouterr()
+    assert captured.err == "listening on 0.0.0.0:9100 (Ctrl+C to stop)\n"
+    assert captured.out.endswith('  from 127.0.0.1:5000  2 bytes  hex 4869  text "Hi"\n')
+    assert sock.address == ("0.0.0.0", 9100)  # noqa: S104 - the address the tool listens on
+    assert sock.closed
+
+
+def test_udp_port_out_of_range_exits_1(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["udp", "--port", "70000"]) == 1
+    assert "outside 1 to 65535" in capsys.readouterr().err
 
 
 def test_hardcoding_unknown_kind_exits_1(

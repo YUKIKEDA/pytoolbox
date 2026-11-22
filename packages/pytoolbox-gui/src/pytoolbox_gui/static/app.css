@@ -672,6 +672,11 @@ body:has(.sidebar-toggle:checked) .sidebar {
   text-decoration: none;
 }
 
+.port-field {
+  width: 8rem;
+  font-variant-numeric: tabular-nums;
+}
+
 /* A run without log lines shows no empty console. */
 .console:empty {
   display: none;
@@ -719,6 +724,7 @@ button {
   color: var(--console-text);
   font-family: var(--mono);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 
   & > span {
     display: block;
