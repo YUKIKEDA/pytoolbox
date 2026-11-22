@@ -19,6 +19,7 @@ from pytoolbox.locks import target_lock
 from pytoolbox.registry import System, Tool
 from pytoolbox.results import BatchResult, ItemFailure
 from pytoolbox.state import state_dir
+from pytoolbox.tools.dev.mock_image import MockImageItem, MockImageResult
 from pytoolbox.tools.dev.regex import Group, Match
 from pytoolbox.tools.system import network, udp
 from pytoolbox.tools.system.cleanup import CacheCleanResult, CacheItem
@@ -119,23 +120,24 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
 ) -> None:
     assert cli.main(["list"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert lines[:4] == [
+    assert lines[:5] == [
         "Developer Utilities",
         "  Generators",
-        f"    csv-gen   {registry.CSV_GEN.summary}",
-        f"    json-gen  {registry.JSON_GEN.summary}",
+        f"    csv-gen     {registry.CSV_GEN.summary}",
+        f"    json-gen    {registry.JSON_GEN.summary}",
+        f"    mock-image  {registry.MOCK_IMAGE.summary}",
     ]
-    assert lines[4:7] == [
+    assert lines[5:8] == [
         "  Text",
         f"    regex       {registry.REGEX.summary}",
         f"    text-count  {registry.TEXT_COUNT.summary}",
     ]
-    assert lines[7:10] == [
+    assert lines[8:11] == [
         "  Code",
         f"    resx-compare  {registry.RESX_COMPARE.summary}",
         f"    hardcoding    {registry.HARDCODING.summary}",
     ]
-    assert lines[10:] == [
+    assert lines[11:] == [
         "System Operations",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
@@ -761,3 +763,128 @@ def test_json_gen_dry_run_and_write(
 
     assert cli.main(["json-gen", str(out), "--rows", "1", "--col", "id:uuid", "--overwrite"]) == 0
     assert f"wrote: {out.resolve()} (1 rows)" in capsys.readouterr().out
+
+
+def test_mock_image_dry_run_write_progress_and_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(state))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    out_dir = tmp_path / "images"
+
+    assert (
+        cli.main(
+            [
+                "mock-image",
+                str(out_dir),
+                "--width",
+                "120",
+                "--height",
+                "80",
+                "--count",
+                "2",
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    dry_out = capsys.readouterr().out
+    assert "120x80" in dry_out
+    assert "dry-run: 2 planned (png)" in dry_out
+    assert not out_dir.exists()
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    assert (
+        cli.main(
+            [
+                "mock-image",
+                str(out_dir),
+                "--width",
+                "120",
+                "--height",
+                "80",
+                "--count",
+                "2",
+                "--random-ratio",
+                "--format",
+                "jpg",
+                "--seed",
+                "3",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr()
+    assert "wrote: 2 images" in captured.out
+    assert "\rmock-image 1/2" in captured.err
+    assert captured.err.endswith("\r\033[K")
+    assert (out_dir / "mock_001.jpg").is_file()
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: False)
+    assert (
+        cli.main(
+            [
+                "mock-image",
+                str(out_dir),
+                "--width",
+                "60",
+                "--height",
+                "40",
+                "--count",
+                "1",
+                "--format",
+                "jpg",
+            ]
+        )
+        == 1
+    )
+    assert "already exists" in capsys.readouterr().err
+
+    assert (
+        cli.main(
+            [
+                "mock-image",
+                str(out_dir),
+                "--width",
+                "60",
+                "--height",
+                "40",
+                "--count",
+                "1",
+                "--format",
+                "jpg",
+                "--overwrite",
+            ]
+        )
+        == 0
+    )
+    assert "wrote: 1 images" in capsys.readouterr().out
+
+    partial = MockImageResult(
+        output_dir=out_dir,
+        format="png",
+        items=(MockImageItem(out_dir / "mock_001.png", 60, 40, 123),),
+        seed=None,
+        random_ratio=False,
+        dry_run=False,
+        batch=BatchResult(1, (ItemFailure(Path("bad.png"), "access is denied"),), cancelled=True),
+    )
+    formatted = cli.format_mock_image(partial)
+    assert "wrote: 1 images, 123 B (123 bytes), 1 failed, cancelled" in formatted
+
+    def fake_gen(
+        _output_dir: Path,
+        _width: int,
+        _height: int,
+        _count: int,
+        **_kwargs: object,
+    ) -> Iterator[MockImageResult]:
+        yield partial
+
+    monkeypatch.setattr(cli, "generate_mock_images", fake_gen)
+    assert (
+        cli.main(["mock-image", str(out_dir), "--width", "60", "--height", "40", "--count", "1"])
+        == 0
+    )
+    assert capsys.readouterr().err == "failed: bad.png: access is denied\n"

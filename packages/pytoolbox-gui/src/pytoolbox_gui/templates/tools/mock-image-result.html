@@ -1,0 +1,41 @@
+{% set failed_count = result.batch.failures | length %}
+<p>
+  {% if result.dry_run %}
+  Dry-run in <code>{{ result.output_dir }}</code>: {{ result.batch.succeeded }} {{ result.format | upper }} images planned{% if failed_count %}, {{ failed_count }} failed{% endif %}{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% else %}
+  Generated in <code>{{ result.output_dir }}</code>: {{ result.batch.succeeded }} {{ result.format | upper }} images ({{ total_size }}, {{ total_bytes }} bytes), {{ failed_count }} failed{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% endif %}
+</p>
+<dl class="counts mock-image-counts">
+  <div><dt>Mode</dt><dd>{% if result.dry_run %}Dry-run{% else %}Written{% endif %}</dd></div>
+  <div><dt>Images</dt><dd>{{ result.batch.succeeded }}</dd></div>
+  <div><dt>Total</dt><dd>{% if result.dry_run %}—{% else %}{{ total_size }}{% endif %}</dd></div>
+  <div><dt>Failed</dt><dd>{{ failed_count }}</dd></div>
+</dl>
+{% if rows %}
+{% if result.items | length > rows | length %}
+<p class="quiet">Showing {{ rows | length }} of {{ result.items | length }} images. Use <code>pytoolbox mock-image</code> for all.</p>
+{% endif %}
+<table class="result-table mock-image-table">
+  <thead>
+    <tr><th scope="col">Size</th><th scope="col">Bytes</th><th scope="col">Path</th></tr>
+  </thead>
+  <tbody>
+    {% for item, size in rows %}
+    <tr>
+      <td><code>{{ item.width }}x{{ item.height }}</code></td>
+      <td class="mock-image-size">{% if result.dry_run %}—{% else %}{{ size }}{% endif %}</td>
+      <td><code>{{ item.path }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% if result.batch.failures %}
+<h2>Failed ({{ failed_count }})</h2>
+<ul class="failures">
+  {% for failure in result.batch.failures %}
+  <li><code>{{ failure.path }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
