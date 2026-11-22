@@ -2,7 +2,7 @@
 
 The current row's ID lives only in this file. Acceptance text lives on the Issue.
 
-Start the current row only. `docs/design.ja.md` §8 names the stages and §9 the initial tools. Their order is this table.
+Start rows whose prerequisites are done; independent rows and design work may run in parallel. `docs/design.ja.md` §8 names the stages and §9 the initial tools. Their order is this table.
 
 ## Current work
 
@@ -31,7 +31,7 @@ M3-2.
 | M5-1 | Add the subprocess runner                                        |       | Not started |
 | M5-2 | Add ping and port                                                |       | Not started |
 
-Each milestone is one stage of `docs/design.ja.md` §8. Each tool row ships its CLI command and its GUI screen together. A row does not start while an earlier row is open.
+Each milestone is one stage of `docs/design.ja.md` §8. Each tool row ships its CLI command and its GUI screen together. Rows with no open dependency may run in parallel.
 
 ## Intentionally out of scope
 
