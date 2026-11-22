@@ -13,6 +13,7 @@ from pytoolbox import registry
 from pytoolbox.errors import InputError, OperationError
 from pytoolbox.registry import Tool
 from pytoolbox.results import LogEvent, clock
+from pytoolbox.tools.dev.csv_gen import generate_csv, parse_columns
 from pytoolbox.tools.dev.hardcoding import (
     DEFAULT_EXCLUDE,
     DEFAULT_EXTENSIONS,
@@ -271,6 +272,21 @@ def _udp(args: argparse.Namespace) -> int:
     return 0
 
 
+def _csv_gen(args: argparse.Namespace) -> int:
+    columns = parse_columns(args.col)
+    result = generate_csv(
+        Path(args.output),
+        args.rows,
+        columns,
+        seed=args.seed,
+        overwrite=args.overwrite,
+        dry_run=args.dry_run,
+    )
+    verb = "dry-run" if result.dry_run else "wrote"
+    print(f"{verb}: {result.output} ({result.rows} rows)")
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -347,6 +363,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--port", type=int, default=UDP_DEFAULT_PORT, help=f"Default: {UDP_DEFAULT_PORT}."
     )
     udp.set_defaults(handler=_udp)
+    csv_gen = commands.add_parser(registry.CSV_GEN.name, help=registry.CSV_GEN.summary)
+    csv_gen.add_argument("output", help="Destination CSV file path.")
+    csv_gen.add_argument("--rows", type=int, required=True, metavar="N", help="Row count.")
+    csv_gen.add_argument(
+        "--col",
+        action="append",
+        required=True,
+        metavar="NAME:TYPE",
+        help="Column spec (`text`, `number`, `boolean`, `date`). Repeatable.",
+    )
+    csv_gen.add_argument("--seed", type=int, help="Optional random seed.")
+    csv_gen.add_argument("--overwrite", action="store_true", help="Replace an existing file.")
+    csv_gen.add_argument(
+        "--dry-run", action="store_true", help="Report the target path without writing."
+    )
+    csv_gen.set_defaults(handler=_csv_gen)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)
