@@ -1,0 +1,29 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/csv-gen" hx-target="#csv-gen-result">
+  <section class="split-side">
+    <h2><label for="csv-gen-output">Output file</label></h2>
+    <input id="csv-gen-output" class="path-field" name="output" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\sample.csv" autofocus>
+    <h2><label for="csv-gen-rows">Rows</label></h2>
+    <input id="csv-gen-rows" class="port-field" type="number" min="1" name="rows"
+           value="{{ default_rows }}">
+    <h2><label for="csv-gen-seed">Seed (optional)</label></h2>
+    <input id="csv-gen-seed" class="port-field" type="number" name="seed" placeholder="random">
+    <h2><label for="csv-gen-columns">Columns (NAME:TYPE per line)</label></h2>
+    <textarea id="csv-gen-columns" name="columns" rows="6"
+              spellcheck="false">{{ default_columns }}</textarea>
+    <p class="quiet">Types: text, number, boolean, date</p>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing file</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="csv-gen-result" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter an output path and columns, then press Start.</p>
+  </section>
+</form>
