@@ -310,11 +310,12 @@ def test_in_use_and_unreadable_entries_record_item_failures_and_continue(
     real_unlink = Path.unlink
     real_scandir = cleanup.os.scandir
 
+    class _LockedPermissionError(PermissionError):
+        winerror: int = 32
+
     def fake_unlink(self: Path, missing_ok: bool = False) -> None:
         if self == locked_file:
-            err = PermissionError(errno.EACCES, "localized in use")
-            err.winerror = 32
-            raise err
+            raise _LockedPermissionError(errno.EACCES, "localized in use")
         real_unlink(self, missing_ok=missing_ok)
 
     def fake_scandir(path: str | cleanup.os.PathLike[str]) -> object:
