@@ -131,7 +131,7 @@ The types live in `pytoolbox.errors` and `pytoolbox.results`. A failure is a `Py
 A tool that writes or deletes takes `--dry-run`, holds a lock on each write target, and records a history entry. A read-only tool has none of the three.
 
 - The lock is an OS file lock (`msvcrt.locking` on Windows, `fcntl.flock` elsewhere) on `<state>/locks/<sha256 of the resolved target>.lock`, so a crashed process releases it. If the lock is held, raise `OperationError` and write nothing.
-- History is SQLite at `<state>/history.sqlite3`. One row per run that is not `--dry-run`: tool, arguments as JSON, start and end in UTC ISO 8601, success count, failure count, cancelled, and the error message if it raised.
+- History is SQLite at `<state>/history.sqlite3`. One row per run that is not `--dry-run`: tool, arguments as JSON, start and end in UTC ISO 8601, success count, failure count, cancelled, and the error message if it raised. The database keeps every row with no cap or pruning, and is read through the library API and the GUI (no CLI history subcommand). Recorded in [ADR 0016](adr/0016-run-history.md).
 - `<state>` is `%LOCALAPPDATA%\pytoolbox` on Windows and `$XDG_STATE_HOME/pytoolbox` elsewhere, with `~/.local/state` when the variable is unset. Tests pass a `tmp_path` state directory.
 
 ### Streaming
@@ -203,6 +203,7 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 | ------------------------- | -------------------------------------------------------------------- |
 | `GET /`                   | The shell page: sidebar, and the home cards in the pane              |
 | `GET /search?q=<text>`    | The home cards of the tools that match. `HX-Request` gets the pane   |
+| `GET /history`            | Recent run history (`?tool=<tool>`). `HX-Request` gets the pane      |
 | `GET /tools/<tool>`       | The tool's page. A request with `HX-Request` gets only the pane      |
 | `POST /tools/<tool>`      | Runs a tool that returns at once, and returns the result fragment    |
 | `POST /tools/<tool>/runs` | Starts a streaming run, and returns a fragment that holds the run ID |
@@ -227,6 +228,7 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 - The CSS is one hand-written file, `static/app.css`, in plain CSS: custom properties for colors and spacing, grid for the layout, nesting where it helps. No CSS framework and no utility classes. Class names describe the part (`sidebar`, `pane`, `console`), not the look.
 - The look follows `docs/design.ja.md` §5: the OS light or dark setting through `light-dark()`, a sidebar that collapses to its icons, and cards on the home page.
 - Search matches `q` against each tool's name and summary, case-insensitive, as a substring, with surrounding spaces ignored. An empty `q` returns every tool. The search box sends it with `hx-get` on `input changed delay:200ms, keyup[key=='Enter']`, so typing sends one request per pause and no script is written by hand. Search is a `GET` because it runs nothing. Source: [htmx Active Search](https://htmx.org/examples/active-search/).
+- `Logs & History` (`GET /history`) shows up to the latest 200 entries newest first in a table with local timestamps, tool name, status (`succeeded`, `partial`, `failed`, or `cancelled`), counts, and summary, filterable by tool name (`?tool=<tool>`). Arguments JSON and full error messages expand inside each row with `<details>`, and there is no button to clear history. On the home page (`GET /`), the recently used tools section shows up to 6 distinct tools from the history database, and is omitted when the database has no entries.
 - Icons are SVG files from [Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons) (MIT), size 20, `regular`, copied to `static/icons/` under their upstream file names (`ic_fluent_home_20_regular.svg`) with the upstream `LICENSE` beside them. They come from commit `4c94ad5f4081168c0d45bdc368f230ecb757cd09`; a newer icon is copied from a named commit, and this line is updated. Only icons in use are copied. A tool's icon is `Screen.icon`, the name between `ic_fluent_` and `_20_regular`. CSS draws an icon as a `mask` filled with `currentColor`, so it follows the theme.
 - Tests use `TestClient` and send `Host` and `Origin` as a browser would. A test also checks each `403` case.
 
