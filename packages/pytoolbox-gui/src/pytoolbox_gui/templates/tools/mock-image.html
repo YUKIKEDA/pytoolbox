@@ -1,0 +1,51 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/mock-image/runs" hx-target="#mock-image-run">
+  <section class="split-side">
+    <h2><label for="mock-image-dir">Output folder</label></h2>
+    <input id="mock-image-dir" class="path-field" name="output_dir" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\images" autofocus>
+    <div class="mock-image-dims">
+      <div>
+        <h2><label for="mock-image-width">Width (px)</label></h2>
+        <input id="mock-image-width" class="port-field" type="number" min="1" name="width"
+               value="{{ default_width }}">
+      </div>
+      <div>
+        <h2><label for="mock-image-height">Height (px)</label></h2>
+        <input id="mock-image-height" class="port-field" type="number" min="1" name="height"
+               value="{{ default_height }}">
+      </div>
+      <div>
+        <h2><label for="mock-image-count">Count</label></h2>
+        <input id="mock-image-count" class="port-field" type="number" min="1" name="count"
+               value="{{ default_count }}">
+      </div>
+    </div>
+    <div class="mock-image-dims">
+      <div>
+        <h2><label for="mock-image-format">Format</label></h2>
+        <select id="mock-image-format" name="format">
+          <option value="png" selected>PNG</option>
+          <option value="jpg">JPEG</option>
+        </select>
+      </div>
+      <div>
+        <h2><label for="mock-image-seed">Seed (optional)</label></h2>
+        <input id="mock-image-seed" class="port-field" type="number" name="seed" placeholder="random">
+      </div>
+    </div>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="random_ratio"> Random ratio (up to width &times; height)</label>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing files</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="mock-image-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter an output folder and image settings, then press Start.</p>
+  </section>
+</form>

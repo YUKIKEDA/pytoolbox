@@ -23,6 +23,11 @@ from pytoolbox.tools.dev.hardcoding import (
     scan_hardcoding,
 )
 from pytoolbox.tools.dev.json_gen import generate_json, load_schema_input
+from pytoolbox.tools.dev.mock_image import (
+    IMAGE_FORMATS,
+    MockImageResult,
+    generate_mock_images,
+)
 from pytoolbox.tools.dev.regex import Group, Match, match_pattern
 from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
@@ -441,6 +446,77 @@ def _json_gen(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_mock_image(result: MockImageResult) -> str:
+    """Render a mock-image result as `pytoolbox mock-image` prints it.
+
+    Args:
+        result: The mock-image outcome.
+
+    Returns:
+        One line per planned or written image, a blank line when non-empty, and the summary.
+    """
+    lines: list[str] = []
+    if result.items:
+        dims = [f"{item.width}x{item.height}" for item in result.items]
+        dim_width = max(len(dim) for dim in dims)
+        if result.dry_run:
+            lines.extend(
+                f"{dim:<{dim_width}}  {item.path}"
+                for item, dim in zip(result.items, dims, strict=True)
+            )
+        else:
+            sizes = [human_size(item.bytes) for item in result.items]
+            size_width = max(len(size) for size in sizes)
+            lines.extend(
+                f"{dim:<{dim_width}}  {size:>{size_width}}  {item.path}"
+                for item, dim, size in zip(result.items, dims, sizes, strict=True)
+            )
+        lines.append("")
+    total_bytes = sum(item.bytes for item in result.items)
+    if result.dry_run:
+        summary = f"dry-run: {result.batch.succeeded} planned ({result.format})"
+    else:
+        summary = (
+            f"wrote: {result.batch.succeeded} images, "
+            f"{human_size(total_bytes)} ({total_bytes} bytes)"
+        )
+    if result.batch.failures:
+        summary += f", {len(result.batch.failures)} failed"
+    if result.batch.cancelled:
+        summary += ", cancelled"
+    lines.append(summary)
+    return "\n".join(lines)
+
+
+def _mock_image(args: argparse.Namespace) -> int:
+    progress = sys.stderr.isatty()
+    for value in generate_mock_images(
+        Path(args.output_dir),
+        args.width,
+        args.height,
+        args.count,
+        random_ratio=args.random_ratio,
+        image_format=args.format,
+        seed=args.seed,
+        overwrite=args.overwrite,
+        dry_run=args.dry_run,
+    ):
+        if isinstance(value, MockImageResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            print(format_mock_image(value))
+            for failure in value.batch.failures:
+                print(f"failed: {failure.path}: {failure.message}", file=sys.stderr)
+        elif progress:
+            print(
+                f"\rmock-image {value.completed}/{value.total}",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -613,6 +689,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--dry-run", action="store_true", help="Report the target path without writing."
     )
     json_gen.set_defaults(handler=_json_gen)
+    mock_image = commands.add_parser(registry.MOCK_IMAGE.name, help=registry.MOCK_IMAGE.summary)
+    mock_image.add_argument("output_dir", help="Destination directory for mock images.")
+    mock_image.add_argument("--width", type=int, required=True, metavar="W", help="Width in px.")
+    mock_image.add_argument("--height", type=int, required=True, metavar="H", help="Height in px.")
+    mock_image.add_argument("--count", type=int, required=True, metavar="N", help="Image count.")
+    mock_image.add_argument(
+        "--random-ratio",
+        action="store_true",
+        help="Randomize dimensions up to the requested width and height.",
+    )
+    mock_image.add_argument(
+        "--format",
+        default="png",
+        help=f"Output image format ({', '.join(IMAGE_FORMATS)}). Default: png.",
+    )
+    mock_image.add_argument("--seed", type=int, help="Optional random seed.")
+    mock_image.add_argument("--overwrite", action="store_true", help="Replace existing files.")
+    mock_image.add_argument(
+        "--dry-run", action="store_true", help="Report planned paths without writing."
+    )
+    mock_image.set_defaults(handler=_mock_image)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)

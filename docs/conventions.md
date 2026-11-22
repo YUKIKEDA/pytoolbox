@@ -17,7 +17,7 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/runner.py    RunResult, run_command, script_path, run_script
   src/pytoolbox/state.py     state_dir: per-user directory for locks and run history
   src/pytoolbox/worker.py    Worker: a process for a call that may never return
-  src/pytoolbox/tools/dev/   Developer Utilities (csv_gen.py, hardcoding.py, json_gen.py, regex.py, resx.py, text.py)
+  src/pytoolbox/tools/dev/   Developer Utilities (csv_gen.py, hardcoding.py, json_gen.py, mock_image.py, regex.py, resx.py, text.py)
   src/pytoolbox/tools/system/  System Operations (cleanup.py, folder_copy.py, folder_size.py, network.py, udp.py)
 packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser

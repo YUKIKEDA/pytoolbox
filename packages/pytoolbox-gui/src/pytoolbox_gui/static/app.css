@@ -967,3 +967,39 @@ button {
     font-variant-numeric: tabular-nums;
   }
 }
+
+.mock-image-dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 2);
+
+  & > div {
+    display: grid;
+    gap: calc(var(--space) / 2);
+    align-content: start;
+  }
+}
+
+.mock-image-counts {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+
+  & div {
+    gap: var(--space);
+  }
+}
+
+.mock-image-table {
+  & th:nth-child(1) {
+    width: 7rem;
+  }
+
+  & th:nth-child(2) {
+    width: 5.5rem;
+  }
+}
+
+.mock-image-size {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
