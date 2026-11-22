@@ -1,0 +1,75 @@
+<header class="tool-header">
+  <h1>Logs &amp; History</h1>
+  <p>Past runs of tools that write or delete.</p>
+</header>
+<form class="history-filter" hx-get="/history" hx-target="#pane" hx-push-url="true"
+      hx-trigger="change, submit">
+  <label for="history-tool">Tool</label>
+  <select id="history-tool" name="tool">
+    <option value="">All tools</option>
+    {% for name in tools %}
+    <option value="{{ name }}"{% if name == selected_tool %} selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+    {% if selected_tool and selected_tool not in tools %}
+    <option value="{{ selected_tool }}" selected>{{ selected_tool }}</option>
+    {% endif %}
+  </select>
+</form>
+{% if runs %}
+<p class="quiet">Showing {{ runs | length }} most recent runs (newest first, up to {{ limit }}).</p>
+<table class="result-table history-table">
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>Tool</th>
+      <th>Status</th>
+      <th>Counts</th>
+      <th>Summary</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for run in runs %}
+    <tr class="history-row-{{ run.status }}">
+      <th scope="row" class="history-time" title="{{ run.started_at.isoformat() }}">{{ run.started_at | local_datetime }}</th>
+      <td><code>{{ run.tool }}</code></td>
+      <td class="history-status">{{ run.status | capitalize }}</td>
+      <td class="history-counts">{{ run.succeeded }} succeeded{% if run.failed %}, {{ run.failed }} failed{% endif %}</td>
+      <td>
+        <div class="history-summary-line">
+          {% if run.error %}
+          {{ run.error.splitlines()[0] }}
+          {% elif run.cancelled %}
+          Cancelled ({{ run.succeeded }} succeeded, {{ run.failed }} failed)
+          {% elif run.failed > 0 %}
+          Completed with {{ run.failed }} failed ({{ run.succeeded }} succeeded)
+          {% else %}
+          Completed ({{ run.succeeded }} succeeded)
+          {% endif %}
+        </div>
+        <details class="history-details">
+          <summary>Details</summary>
+          <dl class="history-meta">
+            <div>
+              <dt>Started</dt>
+              <dd>{{ run.started_at | local_datetime }}</dd>
+            </div>
+            <div>
+              <dt>Finished</dt>
+              <dd>{{ run.finished_at | local_datetime }}</dd>
+            </div>
+          </dl>
+          <p class="history-detail-label">Arguments</p>
+          <pre class="history-pre"><code>{{ run.arguments | pretty_json }}</code></pre>
+          {% if run.error %}
+          <p class="history-detail-label">Error</p>
+          <pre class="history-pre history-error-text">{{ run.error }}</pre>
+          {% endif %}
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="home-empty">{% if selected_tool %}No history entries for “{{ selected_tool }}”.{% else %}No run history yet.{% endif %}</p>
+{% endif %}

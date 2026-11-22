@@ -201,6 +201,12 @@ h2 {
   color: var(--muted);
 }
 
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: var(--space);
+  border-top: 1px solid var(--border);
+}
+
 /* Collapsed: icons only. The tools of open groups stay, without their headings. */
 body:has(.sidebar-toggle:checked) .sidebar {
   & .sidebar-text,
@@ -738,4 +744,110 @@ button {
 
 .run-progress progress {
   width: 100%;
+}
+
+.history-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+}
+
+.history-table {
+  & th:nth-child(1) {
+    width: 15%;
+  }
+
+  & th:nth-child(2) {
+    width: 16%;
+  }
+
+  & th:nth-child(3) {
+    width: 15%;
+  }
+
+  & th:nth-child(4) {
+    width: 16%;
+  }
+
+  & tbody th,
+  & td:nth-child(-n + 4) {
+    overflow-wrap: normal;
+  }
+}
+
+.history-time,
+.history-counts {
+  font-variant-numeric: tabular-nums;
+}
+
+.history-row-succeeded {
+  --status: var(--success);
+}
+
+.history-row-partial {
+  --status: var(--caution);
+}
+
+.history-row-failed {
+  --status: var(--danger);
+}
+
+.history-row-cancelled {
+  --status: var(--muted);
+}
+
+.history-status {
+  color: var(--status);
+  font-weight: 600;
+}
+
+.history-details {
+  margin-top: calc(var(--space) / 2);
+
+  & > summary {
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 12px;
+  }
+}
+
+.history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 2);
+  margin: var(--space) 0;
+  font-size: 12px;
+
+  & dt {
+    color: var(--muted);
+  }
+
+  & dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.history-detail-label {
+  margin: var(--space) 0 calc(var(--space) / 2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.history-pre {
+  margin: 0;
+  padding: var(--space);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--layer);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.history-error-text {
+  border-color: var(--danger);
+  color: var(--danger);
 }
