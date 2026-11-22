@@ -1,8 +1,10 @@
 import argparse
 import importlib.abc
 import io
+import os
 import sys
-from collections.abc import Sequence
+import time
+from collections.abc import Iterator, Sequence
 from importlib.machinery import ModuleSpec
 from pathlib import Path
 from types import ModuleType
@@ -11,10 +13,15 @@ import pytest
 
 import pytoolbox_gui.cli
 from pytoolbox import cli, registry
+from pytoolbox.db import HistoryStore
 from pytoolbox.errors import OperationError
+from pytoolbox.locks import target_lock
 from pytoolbox.registry import System, Tool
+from pytoolbox.results import BatchResult, ItemFailure
+from pytoolbox.state import state_dir
 from pytoolbox.tools.dev.regex import Group, Match
 from pytoolbox.tools.system import udp
+from pytoolbox.tools.system.cleanup import CacheCleanResult, CacheItem
 from pytoolbox.tools.system.folder_size import FolderSizeResult
 
 TOOLS = (
@@ -130,6 +137,8 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
         "System Operations",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
+        "  Cleanup",
+        f"    cache-clean  {registry.CACHE_CLEAN.summary}",
         "  Network",
         f"    udp  {registry.UDP.summary}",
     ]
@@ -504,3 +513,110 @@ def test_csv_gen_dry_run_and_write(
 
     assert cli.main(["csv-gen", str(out), "--rows", "1", "--col", "name:text", "--overwrite"]) == 0
     assert f"wrote: {out.resolve()} (1 rows)" in capsys.readouterr().out
+
+
+def _fake_cache_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+    local = tmp_path / "local"
+    home = tmp_path / "home"
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    return local, home
+
+
+def test_cache_clean_dry_run_and_apply(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    local, _home = _fake_cache_env(tmp_path, monkeypatch)
+    old_temp = local / "Temp" / "old.tmp"
+    old_temp.parent.mkdir(parents=True)
+    old_temp.write_bytes(b"12345")
+    old_time = time.time() - 90000
+    os.utime(old_temp, (old_time, old_time))
+
+    fresh_temp = local / "Temp" / "fresh.tmp"
+    fresh_temp.write_bytes(b"999")
+
+    pip_file = local / "pip" / "Cache" / "pkg.whl"
+    pip_file.parent.mkdir(parents=True)
+    pip_file.write_bytes(b"abcdefgh")
+
+    assert cli.main(["cache-clean", "temp", "pip"]) == 0
+    dry_out = capsys.readouterr().out
+    assert str(old_temp) in dry_out
+    assert str(pip_file) in dry_out
+    assert str(fresh_temp) not in dry_out
+    assert "dry-run: 2 planned, 13 B (13 bytes)" in dry_out
+    assert old_temp.exists()
+    assert pip_file.exists()
+    assert not HistoryStore(state_root=state_dir()).path.exists()
+
+    assert cli.main(["cache-clean", "temp", "pip", "--dry-run"]) == 0
+    assert "dry-run: 2 planned, 13 B (13 bytes)" in capsys.readouterr().out
+
+    assert cli.main(["cache-clean", "temp", "pip", "--apply"]) == 0
+    apply_out = capsys.readouterr().out
+    assert "applied: 2 deleted, 13 B (13 bytes)" in apply_out
+    assert not old_temp.exists()
+    assert fresh_temp.exists()
+    assert not pip_file.exists()
+    assert (local / "pip" / "Cache").is_dir()
+    runs = HistoryStore(state_root=state_dir()).list_runs()
+    assert len(runs) == 1
+    assert runs[0].tool == "cache-clean"
+
+
+def test_cache_clean_rejects_bad_arguments_and_lock_conflict(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    local, _home = _fake_cache_env(tmp_path, monkeypatch)
+
+    assert cli.main(["cache-clean"]) == 1
+    assert capsys.readouterr().err.startswith("error: ")
+
+    assert cli.main(["cache-clean", "unknown"]) == 1
+    assert "Unknown cache target: unknown" in capsys.readouterr().err
+
+    assert cli.main(["cache-clean", "temp", "--dry-run", "--apply"]) == 1
+    assert "not allowed with argument" in capsys.readouterr().err
+
+    pip_root = local / "pip" / "Cache"
+    pip_root.mkdir(parents=True)
+    with target_lock(pip_root, state_root=state_dir()):
+        assert cli.main(["cache-clean", "pip", "--apply"]) == 2
+        assert "Target is locked by another run" in capsys.readouterr().err
+
+
+def test_cache_clean_shows_terminal_progress_and_formats_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    local, _home = _fake_cache_env(tmp_path, monkeypatch)
+    pip_file = local / "pip" / "Cache" / "a.whl"
+    pip_file.parent.mkdir(parents=True)
+    pip_file.write_bytes(b"xy")
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    assert cli.main(["cache-clean", "pip"]) == 0
+    captured = capsys.readouterr()
+    assert "\rcache-clean 1/1" in captured.err
+    assert captured.err.endswith("\r\033[K")
+
+    partial_result = CacheCleanResult(
+        targets=("pip",),
+        items=(CacheItem("pip", pip_file, 2),),
+        total_bytes=2,
+        dry_run=False,
+        batch=BatchResult(1, (ItemFailure(Path("bad.whl"), "access is denied"),), cancelled=True),
+    )
+    formatted = cli.format_cache_clean(partial_result)
+    assert "applied: 1 deleted, 2 B (2 bytes), 1 failed, cancelled" in formatted
+
+    def fake_clean(_targets: Sequence[str], *, apply: bool = False) -> Iterator[CacheCleanResult]:
+        del apply
+        yield partial_result
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: False)
+    monkeypatch.setattr(cli, "clean_caches", fake_clean)
+    assert cli.main(["cache-clean", "pip", "--apply"]) == 0
+    assert capsys.readouterr().err == "failed: bad.whl: access is denied\n"

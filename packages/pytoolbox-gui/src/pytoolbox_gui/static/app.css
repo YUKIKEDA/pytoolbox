@@ -598,6 +598,54 @@ body:has(.sidebar-toggle:checked) .sidebar {
   }
 }
 
+.check-list {
+  display: grid;
+  gap: var(--space);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.check-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+  padding: var(--space) calc(var(--space) * 1.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+
+  & code {
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+}
+
+.cache-clean-counts {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+
+  & div {
+    gap: var(--space);
+  }
+}
+
+.cache-clean-table {
+  & th:nth-child(1) {
+    width: 4.5rem;
+  }
+
+  & th:nth-child(2) {
+    width: 5.5rem;
+  }
+}
+
+.cache-clean-size {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .hardcoding-counts {
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
 
@@ -740,10 +788,19 @@ button {
 .run {
   display: grid;
   gap: var(--space);
+  min-width: 0;
+
+  & > * {
+    min-width: 0;
+  }
 }
 
-.run-progress progress {
-  width: 100%;
+.run-progress {
+  overflow-wrap: anywhere;
+
+  & progress {
+    width: 100%;
+  }
 }
 
 .history-filter {

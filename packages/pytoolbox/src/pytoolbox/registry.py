@@ -73,6 +73,13 @@ FOLDER_SIZE = Tool(
     "List a folder's direct files and folders, largest first, with each folder's total size.",
 )
 
+CACHE_CLEAN = Tool(
+    "cache-clean",
+    System.OPERATIONS,
+    "Cleanup",
+    "Inspect or delete selected user caches (temp, pip, uv, npm, nuget, cargo).",
+)
+
 UDP = Tool(
     "udp",
     System.OPERATIONS,
@@ -80,7 +87,16 @@ UDP = Tool(
     "Listen for UDP datagrams on 0.0.0.0 and log each one's length, hex, and text.",
 )
 
-TOOLS: tuple[Tool, ...] = (CSV_GEN, REGEX, TEXT_COUNT, RESX_COMPARE, HARDCODING, FOLDER_SIZE, UDP)
+TOOLS: tuple[Tool, ...] = (
+    CSV_GEN,
+    REGEX,
+    TEXT_COUNT,
+    RESX_COMPARE,
+    HARDCODING,
+    FOLDER_SIZE,
+    CACHE_CLEAN,
+    UDP,
+)
 """Every tool, in sidebar order. A tool row adds its entry here."""
 
 

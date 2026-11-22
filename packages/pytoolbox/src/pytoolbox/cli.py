@@ -25,6 +25,7 @@ from pytoolbox.tools.dev.hardcoding import (
 from pytoolbox.tools.dev.regex import Group, Match, match_pattern
 from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
+from pytoolbox.tools.system.cleanup import CACHE_TARGETS, CacheCleanResult, clean_caches
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -262,6 +263,58 @@ def _folder_size(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_cache_clean(result: CacheCleanResult) -> str:
+    """Render a cache-clean result as `pytoolbox cache-clean` prints it.
+
+    Args:
+        result: The cache-clean outcome.
+
+    Returns:
+        One line per planned or deleted file, a blank line when non-empty, and the summary.
+    """
+    lines: list[str] = []
+    if result.items:
+        target_width = max(len(item.target) for item in result.items)
+        sizes = [human_size(item.bytes) for item in result.items]
+        size_width = max(len(size) for size in sizes)
+        lines.extend(
+            f"{item.target:<{target_width}}  {size:>{size_width}}  {item.path}"
+            for item, size in zip(result.items, sizes, strict=True)
+        )
+        lines.append("")
+    mode = "dry-run" if result.dry_run else "applied"
+    verb = "planned" if result.dry_run else "deleted"
+    summary = (
+        f"{mode}: {result.batch.succeeded} {verb}, "
+        f"{human_size(result.total_bytes)} ({result.total_bytes} bytes)"
+    )
+    if result.batch.failures:
+        summary += f", {len(result.batch.failures)} failed"
+    if result.batch.cancelled:
+        summary += ", cancelled"
+    lines.append(summary)
+    return "\n".join(lines)
+
+
+def _cache_clean(args: argparse.Namespace) -> int:
+    progress = sys.stderr.isatty()
+    for value in clean_caches(args.targets, apply=args.apply):
+        if isinstance(value, CacheCleanResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            print(format_cache_clean(value))
+            for failure in value.batch.failures:
+                print(f"failed: {failure.path}: {failure.message}", file=sys.stderr)
+        elif progress:
+            print(
+                f"\rcache-clean {value.completed}/{value.total}",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+    return 0
+
+
 def _udp(args: argparse.Namespace) -> int:
     port: int = args.port
     session = listen_udp(port)
@@ -358,6 +411,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--csv", action="store_true", help="Print every item as CSV (UTF-8 with a BOM) instead."
     )
     sizes.set_defaults(handler=_folder_size)
+    cleanup = commands.add_parser(registry.CACHE_CLEAN.name, help=registry.CACHE_CLEAN.summary)
+    cleanup.add_argument(
+        "targets",
+        nargs="+",
+        metavar="TARGET",
+        help=f"Cache targets to clean: {', '.join(CACHE_TARGETS)}.",
+    )
+    cleanup_mode = cleanup.add_mutually_exclusive_group()
+    cleanup_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="List planned paths and byte counts without deleting (default).",
+    )
+    cleanup_mode.add_argument(
+        "--apply",
+        action="store_true",
+        help="Delete eligible cache contents and record the run in history.",
+    )
+    cleanup.set_defaults(handler=_cache_clean)
     udp = commands.add_parser(registry.UDP.name, help=registry.UDP.summary)
     udp.add_argument(
         "--port", type=int, default=UDP_DEFAULT_PORT, help=f"Default: {UDP_DEFAULT_PORT}."

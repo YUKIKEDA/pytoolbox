@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 from pytoolbox.errors import InputError, PytoolboxError
 from pytoolbox.registry import (
+    CACHE_CLEAN,
     CSV_GEN,
     FOLDER_SIZE,
     HARDCODING,
@@ -33,6 +34,7 @@ from pytoolbox.tools.dev.hardcoding import (
 from pytoolbox.tools.dev.regex import Match, match_pattern
 from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
+from pytoolbox.tools.system.cleanup import CacheCleanResult, clean_caches
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -482,6 +484,58 @@ def run_csv_gen(form: Form, *, state_root: Path | None = None) -> Fragment:
     return Fragment("tools/csv-gen-result.html", {"result": result})
 
 
+CACHE_TARGET_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("temp", "Temporary files older than 24 hours"),
+    ("pip", "pip wheel and HTTP cache"),
+    ("uv", "uv package cache"),
+    ("npm", "npm package cache"),
+    ("nuget", "NuGet packages cache"),
+    ("cargo", "Cargo registry cache"),
+)
+"""Checkboxes shown on the `cache-clean` screen, in the order of `CACHE_TARGETS`."""
+
+
+def cache_clean_report(result: CacheCleanResult) -> Report:
+    """Build the cache-clean result fragment with the first planned or deleted items."""
+    rows = [(item, human_size(item.bytes)) for item in result.items[:SHOWN_ITEMS]]
+    return Report(
+        "tools/cache-clean-result.html",
+        {"result": result, "rows": rows, "total_size": human_size(result.total_bytes)},
+    )
+
+
+def stream_cache_clean(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start a cache-clean run from the `cache-clean` form.
+
+    Target names are validated before the run starts.
+
+    Args:
+        form: Submitted form fields (`target` checkboxes and optional `apply` checkbox).
+        state_root: State directory override. Defaults to the request-bound state root.
+
+    Returns:
+        The SSE stream yielding `Progress` and the final `Report`.
+
+    Raises:
+        InputError: No target is selected or a target name is unknown.
+    """
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = clean_caches(
+        form.get("target", ()),
+        apply=checkbox(form, "apply"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield cache_clean_report(value) if isinstance(value, CacheCleanResult) else value
+
+    return stream
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(
         CSV_GEN,
@@ -505,6 +559,13 @@ SCREENS: tuple[Screen, ...] = (
         },
     ),
     Screen(FOLDER_SIZE, "tools/folder-size.html", "storage", stream=stream_folder_size),
+    Screen(
+        CACHE_CLEAN,
+        "tools/cache-clean.html",
+        "broom",
+        stream=stream_cache_clean,
+        context={"target_options": CACHE_TARGET_OPTIONS},
+    ),
     Screen(
         UDP,
         "tools/udp.html",
