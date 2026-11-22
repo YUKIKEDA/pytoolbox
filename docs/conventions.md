@@ -167,7 +167,7 @@ Recorded in [ADR 0010](adr/0010-regex-worker.md).
 
 ### Tests
 
-Call a pure function directly. Files use pytest `tmp_path`. A unit test does not open a socket or the network. `udp` takes the function that makes its socket, and its tests pass a fake socket. Branch coverage stays at least 90%.
+Call a pure function directly. Files use pytest `tmp_path`. A unit test does not open a socket or the network. `udp` takes the function that makes its socket, and its tests pass a fake socket. `port` likewise injects its socket connector, and `ping` tests inject the runner rather than sending real ICMP packets. Branch coverage stays at least 90%.
 
 A test never starts the real GUI server: `pytoolbox gui` tests replace `serve`, and `serve` tests replace `uvicorn.Server` and the port check. The server is tested through `TestClient` with `base_url="http://127.0.0.1:8000"`.
 
@@ -190,6 +190,12 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 `pytoolbox hardcoding DIR [--ext EXT] [--exclude NAME] [--kind KIND]` prints one line per finding: `path:line  kind  <JSON string>`, separated by two spaces. `path` is relative to `DIR` with `/` separators, and `kind` is `string`, `number`, `ip`, `url`, or `email`. Each option takes a comma-separated list and can repeat. `--ext` defaults to `.cs,.vb,.js,.py`; the leading `.` is optional and case does not matter. `--exclude` names folders, matched whole and ignoring case, and defaults to `node_modules,bin,obj,.git,.venv`. `--kind` defaults to all five; an unknown kind is `InputError`. Files go in path order, findings in line order, then by position and kind. An unreadable file prints `skipped: path: reason` to stderr. Findings still exit `0`; Ctrl+C exits `130`.
 
 `pytoolbox folder-size [FOLDER] [--top N] [--csv]` sizes the current folder when `FOLDER` is left out. It prints one line per direct item, largest first: `size  kind  name`, with sizes right-aligned and kinds padded to the longest, then a blank line and `total: <size> (<n> items)`, and `unreadable: <n>` when any item could not be read. `kind` is `folder`, `file`, or `link`; a link or junction is not followed and has size 0. Sizes are logical sizes, as Explorer's "Size" shows them, in 1024 steps: `B` as a whole number, then `KB`, `MB`, `GB`, and `TB` with one decimal. `--top N` prints the first `N` items and `... N more` for the rest. `--csv` prints CSV instead of the table: UTF-8 with a BOM, CRLF line ends, the header `name,kind,bytes,size`, and every item, whatever `--top` says. The tool writes no file; `> result.csv` saves it. The CSV goes to `sys.stdout.buffer` as bytes: Windows text mode turns each `\n` into `\r\n`, so writing the CRLF text through `sys.stdout` would give CR CR LF. Any output with its own line ends is written the same way. When stderr is a terminal, progress, `folders done/total`, is redrawn on one stderr line and cleared before the output. A cancelled walk ends the table with `cancelled`. Ctrl+C exits `130`.
+
+`pytoolbox ping HOST [--timeout SEC]` sends one ICMP echo via the subprocess runner (`ping -n 1 -w <ms> HOST` on Windows, `ping -c 1 -W <ceil(sec)> HOST` elsewhere). Timeout defaults to 3 seconds. Blank hosts or non-positive/non-finite timeouts raise `InputError`. Unreachable hosts print the diagnostic result and exit `0`; runner startup failures raise `OperationError`.
+
+`pytoolbox port HOST PORT [--timeout SEC]` opens one TCP connection to measure reachability and round-trip time in milliseconds. Timeout defaults to 3 seconds. Blank hosts, ports outside `1` to `65535`, or invalid timeouts raise `InputError`. A closed or timed-out port prints `closed` and exits `0`.
+
+`pytoolbox csv-gen OUTPUT --rows N --col NAME:TYPE [--col ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (`text`, `number`, `boolean`, `date`) as UTF-8 with a BOM. It locks the output target with `target_lock` and records non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0017](adr/0017-ping-port-and-csv-gen.md).
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
