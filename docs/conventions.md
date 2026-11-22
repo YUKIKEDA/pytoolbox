@@ -13,6 +13,7 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/locks.py     lock_path, target_lock
   src/pytoolbox/registry.py  Tool, System, TOOLS, one constant per tool
   src/pytoolbox/results.py   Progress, ItemFailure, BatchResult, LogEvent, Cancel
+  src/pytoolbox/runner.py    RunResult, run_command, script_path, run_script
   src/pytoolbox/state.py     state_dir: per-user directory for locks and run history
   src/pytoolbox/worker.py    Worker: a process for a call that may never return
   src/pytoolbox/tools/dev/   Developer Utilities (text.py, regex.py, resx.py, hardcoding.py)
