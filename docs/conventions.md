@@ -17,7 +17,7 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/runner.py    RunResult, run_command, script_path, run_script
   src/pytoolbox/state.py     state_dir: per-user directory for locks and run history
   src/pytoolbox/worker.py    Worker: a process for a call that may never return
-  src/pytoolbox/tools/dev/   Developer Utilities (text.py, regex.py, resx.py, hardcoding.py)
+  src/pytoolbox/tools/dev/   Developer Utilities (csv_gen.py, hardcoding.py, regex.py, resx.py, text.py)
   src/pytoolbox/tools/system/  System Operations (folder_size.py, udp.py)
 packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
@@ -56,6 +56,7 @@ Recorded in [docs/adr/0001-toolchain.md](adr/0001-toolchain.md).
 | Types           | pyright, `standard`                                    |
 | Tests           | pytest, branch coverage at least 90% (`just coverage`) |
 | GUI tests       | FastAPI `TestClient`, `httpx2` in the dev group        |
+| Images          | Pillow (`pillow>=10.1`, HPND) in `pytoolbox`           |
 | PDFs            | pypdf (`pypdf>=5`, BSD-3-Clause) in `pytoolbox`        |
 | Tasks           | just                                                   |
 
@@ -170,7 +171,7 @@ Recorded in [ADR 0010](adr/0010-regex-worker.md).
 
 ### Tests
 
-Call a pure function directly. Files use pytest `tmp_path`. A unit test does not open a socket or the network. `udp` takes the function that makes its socket, and its tests pass a fake socket. Branch coverage stays at least 90%.
+Call a pure function directly. Files use pytest `tmp_path`. A unit test does not open a socket or the network. `udp` takes the function that makes its socket, and its tests pass a fake socket. `port` likewise injects its socket connector, and `ping` tests inject the runner rather than sending real ICMP packets. Branch coverage stays at least 90%.
 
 A test never starts the real GUI server: `pytoolbox gui` tests replace `serve`, and `serve` tests replace `uvicorn.Server` and the port check. The server is tested through `TestClient` with `base_url="http://127.0.0.1:8000"`.
 
@@ -193,6 +194,18 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 `pytoolbox hardcoding DIR [--ext EXT] [--exclude NAME] [--kind KIND]` prints one line per finding: `path:line  kind  <JSON string>`, separated by two spaces. `path` is relative to `DIR` with `/` separators, and `kind` is `string`, `number`, `ip`, `url`, or `email`. Each option takes a comma-separated list and can repeat. `--ext` defaults to `.cs,.vb,.js,.py`; the leading `.` is optional and case does not matter. `--exclude` names folders, matched whole and ignoring case, and defaults to `node_modules,bin,obj,.git,.venv`. `--kind` defaults to all five; an unknown kind is `InputError`. Files go in path order, findings in line order, then by position and kind. An unreadable file prints `skipped: path: reason` to stderr. Findings still exit `0`; Ctrl+C exits `130`.
 
 `pytoolbox folder-size [FOLDER] [--top N] [--csv]` sizes the current folder when `FOLDER` is left out. It prints one line per direct item, largest first: `size  kind  name`, with sizes right-aligned and kinds padded to the longest, then a blank line and `total: <size> (<n> items)`, and `unreadable: <n>` when any item could not be read. `kind` is `folder`, `file`, or `link`; a link or junction is not followed and has size 0. Sizes are logical sizes, as Explorer's "Size" shows them, in 1024 steps: `B` as a whole number, then `KB`, `MB`, `GB`, and `TB` with one decimal. `--top N` prints the first `N` items and `... N more` for the rest. `--csv` prints CSV instead of the table: UTF-8 with a BOM, CRLF line ends, the header `name,kind,bytes,size`, and every item, whatever `--top` says. The tool writes no file; `> result.csv` saves it. The CSV goes to `sys.stdout.buffer` as bytes: Windows text mode turns each `\n` into `\r\n`, so writing the CRLF text through `sys.stdout` would give CR CR LF. Any output with its own line ends is written the same way. When stderr is a terminal, progress, `folders done/total`, is redrawn on one stderr line and cleared before the output. A cancelled walk ends the table with `cancelled`. Ctrl+C exits `130`.
+
+`pytoolbox ping HOST [--timeout SEC]` sends one ICMP echo via the subprocess runner (`ping -n 1 -w <ms> HOST` on Windows, `ping -c 1 -W <ceil(sec)> HOST` elsewhere). Timeout defaults to 3 seconds. Blank hosts or non-positive/non-finite timeouts raise `InputError`. Unreachable hosts print the diagnostic result and exit `0`; runner startup failures raise `OperationError`.
+
+`pytoolbox port HOST PORT [--timeout SEC]` opens one TCP connection to measure reachability and round-trip time in milliseconds. Timeout defaults to 3 seconds. Blank hosts, ports outside `1` to `65535`, or invalid timeouts raise `InputError`. A closed or timed-out port prints `closed` and exits `0`.
+
+`pytoolbox csv-gen OUTPUT --rows N --col NAME:TYPE [--col ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (`text`, `number`, `boolean`, `date`) as UTF-8 with a BOM. It locks the output target with `target_lock` and records non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0017](adr/0017-ping-port-and-csv-gen.md).
+
+`pytoolbox json-gen OUTPUT --rows N --schema SCHEMA_OR_JSON [--col NAME:TYPE ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (supporting all 13 schema types in §9) as a UTF-8 JSON array without a BOM, holding `target_lock` on `OUTPUT` and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox mock-image OUTPUT_DIR --width W --height H --count N [--random-ratio] [--format png|jpg] [--seed S] [--overwrite] [--dry-run]` generates numbered mock images (`mock_001.png`, etc.) using Pillow, streaming `Progress` and `BatchResult`, locking targets with `target_lock`, and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox file-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` and `pytoolbox folder-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` acquire `target_lock` across all expanded targets, stream `Progress` and `BatchResult`, and record non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0018](adr/0018-m4-2-to-m4-5.md).
 
 `pytoolbox pdf-split INPUT OUTPUT_DIR [--format page_{n}.pdf] [--overwrite] [--dry-run]` splits a PDF one page per file with `pypdf`, locking every target path, streaming `Progress` and `BatchResult`, and recording non-`--dry-run` runs in `HistoryStore`.
 
