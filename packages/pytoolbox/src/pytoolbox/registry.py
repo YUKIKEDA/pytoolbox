@@ -45,6 +45,13 @@ JSON_GEN = Tool(
     "Generate a UTF-8 JSON array file from property definitions and a row count.",
 )
 
+MOCK_IMAGE = Tool(
+    "mock-image",
+    System.DEVELOPER,
+    "Generators",
+    "Generate numbered PNG or JPEG mock images with pixel dimensions.",
+)
+
 REGEX = Tool(
     "regex",
     System.DEVELOPER,
@@ -118,6 +125,7 @@ UDP = Tool(
 TOOLS: tuple[Tool, ...] = (
     CSV_GEN,
     JSON_GEN,
+    MOCK_IMAGE,
     REGEX,
     TEXT_COUNT,
     RESX_COMPARE,

@@ -17,6 +17,7 @@ from pytoolbox.registry import (
     FOLDER_SIZE,
     HARDCODING,
     JSON_GEN,
+    MOCK_IMAGE,
     PING,
     PORT,
     REGEX,
@@ -36,6 +37,19 @@ from pytoolbox.tools.dev.hardcoding import (
     scan_hardcoding,
 )
 from pytoolbox.tools.dev.json_gen import DEFAULT_SCHEMA_TEXT, generate_json, load_schema_input
+from pytoolbox.tools.dev.mock_image import (
+    DEFAULT_COUNT as MOCK_IMAGE_DEFAULT_COUNT,
+)
+from pytoolbox.tools.dev.mock_image import (
+    DEFAULT_HEIGHT as MOCK_IMAGE_DEFAULT_HEIGHT,
+)
+from pytoolbox.tools.dev.mock_image import (
+    DEFAULT_WIDTH as MOCK_IMAGE_DEFAULT_WIDTH,
+)
+from pytoolbox.tools.dev.mock_image import (
+    MockImageResult,
+    generate_mock_images,
+)
 from pytoolbox.tools.dev.regex import Match, match_pattern
 from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
@@ -700,6 +714,65 @@ def stream_file_copy(form: Form, *, state_root: Path | None = None) -> Stream:
     return stream
 
 
+def mock_image_report(result: MockImageResult) -> Report:
+    """Build the mock-image result fragment with dimensions, sizes, and paths."""
+    rows = [(item, human_size(item.bytes)) for item in result.items[:SHOWN_ITEMS]]
+    total_bytes = sum(item.bytes for item in result.items)
+    return Report(
+        "tools/mock-image-result.html",
+        {
+            "result": result,
+            "rows": rows,
+            "total_bytes": total_bytes,
+            "total_size": human_size(total_bytes),
+        },
+    )
+
+
+def stream_mock_image(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start mock image generation from the `mock-image` form.
+
+    Parameters are validated before the run starts.
+
+    Raises:
+        InputError: Any field is missing, relative, or invalid, or targets exist.
+    """
+    output_dir = path_field(form, "output_dir", "Output folder")
+    if output_dir is None:
+        msg = "Output folder: enter a path."
+        raise InputError(msg)
+
+    width = _int_field(form, "width", "Width")
+    height = _int_field(form, "height", "Height")
+    count = _int_field(form, "count", "Count")
+    seed_text = text_field(form, "seed").strip()
+    seed = _int_field(form, "seed", "Seed") if seed_text else None
+    image_format = text_field(form, "format").strip() or "png"
+
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = generate_mock_images(
+        output_dir,
+        width,
+        height,
+        count,
+        random_ratio=checkbox(form, "random_ratio"),
+        image_format=image_format,
+        seed=seed,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield mock_image_report(value) if isinstance(value, MockImageResult) else value
+
+    return stream
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(
         CSV_GEN,
@@ -714,6 +787,17 @@ SCREENS: tuple[Screen, ...] = (
         "braces",
         run=run_json_gen,
         context={"default_schema": DEFAULT_SCHEMA_TEXT, "default_rows": 10},
+    ),
+    Screen(
+        MOCK_IMAGE,
+        "tools/mock-image.html",
+        "image",
+        stream=stream_mock_image,
+        context={
+            "default_width": MOCK_IMAGE_DEFAULT_WIDTH,
+            "default_height": MOCK_IMAGE_DEFAULT_HEIGHT,
+            "default_count": MOCK_IMAGE_DEFAULT_COUNT,
+        },
     ),
     Screen(REGEX, "tools/regex.html", "text_asterisk", run=run_regex),
     Screen(TEXT_COUNT, "tools/text-count.html", "text_word_count", run=run_text_count),
