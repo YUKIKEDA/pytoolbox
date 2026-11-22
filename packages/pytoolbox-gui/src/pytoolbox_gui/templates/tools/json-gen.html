@@ -1,0 +1,31 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/json-gen" hx-target="#json-gen-result">
+  <section class="split-side">
+    <h2><label for="json-gen-output">Output file</label></h2>
+    <input id="json-gen-output" class="path-field" name="output" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\sample.json" autofocus>
+    <h2><label for="json-gen-rows">Rows</label></h2>
+    <input id="json-gen-rows" class="port-field" type="number" min="1" name="rows"
+           value="{{ default_rows }}">
+    <h2><label for="json-gen-seed">Seed (optional)</label></h2>
+    <input id="json-gen-seed" class="port-field" type="number" name="seed" placeholder="random">
+    <h2><label for="json-gen-schema">Schema JSON</label></h2>
+    <textarea id="json-gen-schema" name="schema" rows="12"
+              spellcheck="false">{{ default_schema }}</textarea>
+    <p class="quiet">
+      Types: string, number, boolean, date, email, uuid, url, ip, path, array, object, date_range, custom_list
+    </p>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing file</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="json-gen-result" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter an output path and schema, then press Start.</p>
+  </section>
+</form>

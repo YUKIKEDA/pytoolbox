@@ -111,15 +111,22 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
 ) -> None:
     assert cli.main(["list"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert lines[:2] == ["Developer Utilities", "  Text"]
-    assert lines[2].startswith("    regex       ")
-    assert lines[3].startswith("    text-count  ")
-    assert lines[4:7] == [
+    assert lines[:3] == [
+        "Developer Utilities",
+        "  Generators",
+        f"    json-gen  {registry.JSON_GEN.summary}",
+    ]
+    assert lines[3:6] == [
+        "  Text",
+        f"    regex       {registry.REGEX.summary}",
+        f"    text-count  {registry.TEXT_COUNT.summary}",
+    ]
+    assert lines[6:9] == [
         "  Code",
         f"    resx-compare  {registry.RESX_COMPARE.summary}",
         f"    hardcoding    {registry.HARDCODING.summary}",
     ]
-    assert lines[7:] == [
+    assert lines[9:] == [
         "System Operations",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
@@ -458,3 +465,55 @@ def test_run_exits_with_the_code_of_main(monkeypatch: pytest.MonkeyPatch) -> Non
         cli.run()
 
     assert raised.value.code == 0
+
+
+def test_json_gen_dry_run_and_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(state))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    out = tmp_path / "out.json"
+
+    assert (
+        cli.main(
+            [
+                "json-gen",
+                str(out),
+                "--rows",
+                "2",
+                "--col",
+                "id:uuid",
+                "--col",
+                "name:string",
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    assert f"dry-run: {out.resolve()} (2 rows)" in capsys.readouterr().out
+    assert not out.exists()
+
+    assert (
+        cli.main(
+            [
+                "json-gen",
+                str(out),
+                "--rows",
+                "2",
+                "--schema",
+                '{"id": "uuid", "role": {"type": "custom_list", "values": ["a"]}}',
+                "--seed",
+                "5",
+            ]
+        )
+        == 0
+    )
+    assert f"wrote: {out.resolve()} (2 rows)" in capsys.readouterr().out
+    assert not out.read_bytes().startswith(b"\xef\xbb\xbf")
+
+    assert cli.main(["json-gen", str(out), "--rows", "1", "--col", "id:uuid"]) == 1
+    assert "already exists" in capsys.readouterr().err
+
+    assert cli.main(["json-gen", str(out), "--rows", "1", "--col", "id:uuid", "--overwrite"]) == 0
+    assert f"wrote: {out.resolve()} (1 rows)" in capsys.readouterr().out

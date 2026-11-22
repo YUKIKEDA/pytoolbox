@@ -1,5 +1,6 @@
 """The GUI screen of each tool. Every tool in the registry has one."""
 
+import contextvars
 import threading
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -9,7 +10,16 @@ from pathlib import Path
 from urllib.parse import quote
 
 from pytoolbox.errors import InputError, PytoolboxError
-from pytoolbox.registry import FOLDER_SIZE, HARDCODING, REGEX, RESX_COMPARE, TEXT_COUNT, UDP, Tool
+from pytoolbox.registry import (
+    FOLDER_SIZE,
+    HARDCODING,
+    JSON_GEN,
+    REGEX,
+    RESX_COMPARE,
+    TEXT_COUNT,
+    UDP,
+    Tool,
+)
 from pytoolbox.results import Cancel, LogEvent, Progress
 from pytoolbox.tools.dev.hardcoding import (
     DEFAULT_EXCLUDE,
@@ -19,6 +29,7 @@ from pytoolbox.tools.dev.hardcoding import (
     HardcodingResult,
     scan_hardcoding,
 )
+from pytoolbox.tools.dev.json_gen import DEFAULT_SCHEMA_TEXT, generate_json, load_schema_input
 from pytoolbox.tools.dev.regex import Match, match_pattern
 from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
@@ -39,6 +50,19 @@ MATCH_TIMEOUT = 1.0
 """Seconds the regex screen waits for one match (docs/design.ja.md §2)."""
 
 _regex_worker = Worker()
+_state_root: contextvars.ContextVar[Path | None] = contextvars.ContextVar(
+    "pytoolbox_gui_state_root", default=None
+)
+
+
+def set_state_root(root: Path | None) -> contextvars.Token[Path | None]:
+    """Bind the state root used by write/delete screens during the current request."""
+    return _state_root.set(root)
+
+
+def reset_state_root(token: contextvars.Token[Path | None]) -> None:
+    """Restore the previous state root token."""
+    _state_root.reset(token)
 
 
 def close_workers() -> None:
@@ -415,7 +439,61 @@ def stream_udp(form: Form) -> Stream:
     return stream
 
 
+def run_json_gen(form: Form, *, state_root: Path | None = None) -> Fragment:
+    """Generate a synthetic JSON array file from the `json-gen` form.
+
+    Raises:
+        InputError: Any field or schema is missing, relative, or invalid, or target exists.
+        OperationError: The target is locked or cannot be written.
+    """
+    output = path_field(form, "output", "Output file")
+    if output is None:
+        msg = "Output file: enter a path."
+        raise InputError(msg)
+
+    rows_text = text_field(form, "rows").strip()
+    try:
+        rows = int(rows_text)
+    except ValueError:
+        msg = f"Rows: enter a whole number, not {rows_text!r}."
+        raise InputError(msg) from None
+
+    seed_text = text_field(form, "seed").strip()
+    if not seed_text:
+        seed: int | None = None
+    else:
+        try:
+            seed = int(seed_text)
+        except ValueError:
+            msg = f"Seed: enter a whole number, not {seed_text!r}."
+            raise InputError(msg) from None
+
+    schema_text = text_field(form, "schema")
+    if not schema_text.strip().startswith("{"):
+        msg = "Schema: enter a JSON object."
+        raise InputError(msg)
+    schema = load_schema_input(schema_text)
+    active_state = _state_root.get() if state_root is None else state_root
+    result = generate_json(
+        output,
+        rows,
+        schema,
+        seed=seed,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+    )
+    return Fragment("tools/json-gen-result.html", {"result": result})
+
+
 SCREENS: tuple[Screen, ...] = (
+    Screen(
+        JSON_GEN,
+        "tools/json-gen.html",
+        "braces",
+        run=run_json_gen,
+        context={"default_schema": DEFAULT_SCHEMA_TEXT, "default_rows": 10},
+    ),
     Screen(REGEX, "tools/regex.html", "text_asterisk", run=run_regex),
     Screen(TEXT_COUNT, "tools/text-count.html", "text_word_count", run=run_text_count),
     Screen(RESX_COMPARE, "tools/resx-compare.html", "branch_compare", run=run_resx_compare),
