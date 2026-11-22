@@ -6,7 +6,7 @@ Start rows whose prerequisites are done; independent rows and design work may ru
 
 ## Current work
 
-M4-2.
+M4-3.
 
 | ID   | Title                                                            | Issue | Status      |
 | ---- | ---------------------------------------------------------------- | ----- | ----------- |
@@ -20,8 +20,8 @@ M4-2.
 | M3-1 | Add the per-target lock                                          | #64   | Done        |
 | M3-2 | Add the run history and its page                                 | #70   | Done        |
 | M4-1 | Add csv-gen                                                      | #78   | Done        |
-| M4-2 | Add json-gen                                                     |       | Next        |
-| M4-3 | Add mock-image                                                   |       | Not started |
+| M4-2 | Add json-gen                                                     | #84   | Done        |
+| M4-3 | Add mock-image                                                   |       | Next        |
 | M4-4 | Add file-copy                                                    |       | Not started |
 | M4-5 | Add folder-copy                                                  |       | Not started |
 | M4-6 | Add pdf-split                                                    |       | Not started |

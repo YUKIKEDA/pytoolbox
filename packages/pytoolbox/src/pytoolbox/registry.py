@@ -38,6 +38,13 @@ CSV_GEN = Tool(
     "Generate a UTF-8 BOM CSV file from column types and a row count.",
 )
 
+JSON_GEN = Tool(
+    "json-gen",
+    System.DEVELOPER,
+    "Generators",
+    "Generate a UTF-8 JSON array file from property definitions and a row count.",
+)
+
 REGEX = Tool(
     "regex",
     System.DEVELOPER,
@@ -89,6 +96,7 @@ UDP = Tool(
 
 TOOLS: tuple[Tool, ...] = (
     CSV_GEN,
+    JSON_GEN,
     REGEX,
     TEXT_COUNT,
     RESX_COMPARE,

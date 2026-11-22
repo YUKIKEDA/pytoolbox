@@ -17,7 +17,7 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/runner.py    RunResult, run_command, script_path, run_script
   src/pytoolbox/state.py     state_dir: per-user directory for locks and run history
   src/pytoolbox/worker.py    Worker: a process for a call that may never return
-  src/pytoolbox/tools/dev/   Developer Utilities (csv_gen.py, hardcoding.py, regex.py, resx.py, text.py)
+  src/pytoolbox/tools/dev/   Developer Utilities (csv_gen.py, hardcoding.py, json_gen.py, regex.py, resx.py, text.py)
   src/pytoolbox/tools/system/  System Operations (cleanup.py, folder_size.py, udp.py)
 packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
@@ -56,6 +56,8 @@ Recorded in [docs/adr/0001-toolchain.md](adr/0001-toolchain.md).
 | Types           | pyright, `standard`                                    |
 | Tests           | pytest, branch coverage at least 90% (`just coverage`) |
 | GUI tests       | FastAPI `TestClient`, `httpx2` in the dev group        |
+| Images          | Pillow (`pillow>=10.1`, HPND) in `pytoolbox`           |
+| PDFs            | pypdf (`pypdf>=5`, BSD-3-Clause) in `pytoolbox`        |
 | Tasks           | just                                                   |
 
 ## Python
@@ -198,6 +200,20 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 `pytoolbox port HOST PORT [--timeout SEC]` opens one TCP connection to measure reachability and round-trip time in milliseconds. Timeout defaults to 3 seconds. Blank hosts, ports outside `1` to `65535`, or invalid timeouts raise `InputError`. A closed or timed-out port prints `closed` and exits `0`.
 
 `pytoolbox csv-gen OUTPUT --rows N --col NAME:TYPE [--col ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (`text`, `number`, `boolean`, `date`) as UTF-8 with a BOM. It locks the output target with `target_lock` and records non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0017](adr/0017-ping-port-and-csv-gen.md).
+
+`pytoolbox json-gen OUTPUT --rows N --schema SCHEMA_OR_JSON [--col NAME:TYPE ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (supporting all 13 schema types in §9) as a UTF-8 JSON array without a BOM, holding `target_lock` on `OUTPUT` and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox mock-image OUTPUT_DIR --width W --height H --count N [--random-ratio] [--format png|jpg] [--seed S] [--overwrite] [--dry-run]` generates numbered mock images (`mock_001.png`, etc.) using Pillow, streaming `Progress` and `BatchResult`, locking targets with `target_lock`, and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox file-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` and `pytoolbox folder-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` acquire `target_lock` across all expanded targets, stream `Progress` and `BatchResult`, and record non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0018](adr/0018-m4-2-to-m4-5.md).
+
+`pytoolbox pdf-split INPUT OUTPUT_DIR [--format page_{n}.pdf] [--overwrite] [--dry-run]` splits a PDF one page per file with `pypdf`, locking every target path, streaming `Progress` and `BatchResult`, and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox file-merge INPUT [INPUT ...] --output-dir DIR [--sep FMT] [--overwrite] [--dry-run]` merges text files into `merged_YYYYMMDD_HHMMSS.txt` (UTF-8 without BOM, default separator `--- {name} ---`), recording unreadable files both inline in the output and as `ItemFailure`, locking the target, and streaming `Progress` and `BatchResult`.
+
+`pytoolbox image-clip INPUT_DIR --box X1,Y1,X2,Y2 [--output-dir DIR] [--overwrite] [--dry-run]` crops `jpg`, `jpeg`, `png`, `bmp`, and `gif` images under `INPUT_DIR` with Pillow (`quality=95`, clamping outside coordinates, writing `cropped_` to `INPUT_DIR` when `--output-dir` is omitted), locking targets and streaming `Progress` and `BatchResult`.
+
+`pytoolbox cache-clean TARGET [TARGET ...] [--dry-run | --apply]` validates target names upfront, defaults to `--dry-run`, locks target roots and deletes only on `--apply`, streams `Progress` and `BatchResult`, and records `--apply` runs in `HistoryStore`. Recorded in [ADR 0019](adr/0019-m4-6-to-m4-9.md).
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 

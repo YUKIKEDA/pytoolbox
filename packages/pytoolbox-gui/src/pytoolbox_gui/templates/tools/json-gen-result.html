@@ -1,0 +1,10 @@
+{% from "macros.html" import clear_error %}
+{{ clear_error() }}
+<h2>{% if result.dry_run %}Dry-run{% else %}Written{% endif %}</h2>
+<dl class="counts">
+  <div><dt>Rows</dt><dd>{{ result.rows }}</dd></div>
+  <div><dt>Fields</dt><dd>{{ result.fields | length }}</dd></div>
+  <div><dt>Seed</dt><dd>{{ result.seed if result.seed is not none else "random" }}</dd></div>
+</dl>
+<p>{% if result.dry_run %}Would write{% else %}Wrote{% endif %} UTF-8 (no BOM) JSON array to:</p>
+<pre class="history-pre"><code>{{ result.output }}</code></pre>
