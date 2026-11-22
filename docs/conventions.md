@@ -56,6 +56,7 @@ Recorded in [docs/adr/0001-toolchain.md](adr/0001-toolchain.md).
 | Types           | pyright, `standard`                                    |
 | Tests           | pytest, branch coverage at least 90% (`just coverage`) |
 | GUI tests       | FastAPI `TestClient`, `httpx2` in the dev group        |
+| Images          | Pillow (`pillow>=10.1`, HPND) in `pytoolbox`           |
 | Tasks           | just                                                   |
 
 ## Python
@@ -192,6 +193,12 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 `pytoolbox hardcoding DIR [--ext EXT] [--exclude NAME] [--kind KIND]` prints one line per finding: `path:line  kind  <JSON string>`, separated by two spaces. `path` is relative to `DIR` with `/` separators, and `kind` is `string`, `number`, `ip`, `url`, or `email`. Each option takes a comma-separated list and can repeat. `--ext` defaults to `.cs,.vb,.js,.py`; the leading `.` is optional and case does not matter. `--exclude` names folders, matched whole and ignoring case, and defaults to `node_modules,bin,obj,.git,.venv`. `--kind` defaults to all five; an unknown kind is `InputError`. Files go in path order, findings in line order, then by position and kind. An unreadable file prints `skipped: path: reason` to stderr. Findings still exit `0`; Ctrl+C exits `130`.
 
 `pytoolbox folder-size [FOLDER] [--top N] [--csv]` sizes the current folder when `FOLDER` is left out. It prints one line per direct item, largest first: `size  kind  name`, with sizes right-aligned and kinds padded to the longest, then a blank line and `total: <size> (<n> items)`, and `unreadable: <n>` when any item could not be read. `kind` is `folder`, `file`, or `link`; a link or junction is not followed and has size 0. Sizes are logical sizes, as Explorer's "Size" shows them, in 1024 steps: `B` as a whole number, then `KB`, `MB`, `GB`, and `TB` with one decimal. `--top N` prints the first `N` items and `... N more` for the rest. `--csv` prints CSV instead of the table: UTF-8 with a BOM, CRLF line ends, the header `name,kind,bytes,size`, and every item, whatever `--top` says. The tool writes no file; `> result.csv` saves it. The CSV goes to `sys.stdout.buffer` as bytes: Windows text mode turns each `\n` into `\r\n`, so writing the CRLF text through `sys.stdout` would give CR CR LF. Any output with its own line ends is written the same way. When stderr is a terminal, progress, `folders done/total`, is redrawn on one stderr line and cleared before the output. A cancelled walk ends the table with `cancelled`. Ctrl+C exits `130`.
+
+`pytoolbox json-gen OUTPUT --rows N --schema SCHEMA_OR_JSON [--col NAME:TYPE ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (supporting all 13 schema types in §9) as a UTF-8 JSON array without a BOM, holding `target_lock` on `OUTPUT` and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox mock-image OUTPUT_DIR --width W --height H --count N [--random-ratio] [--format png|jpg] [--seed S] [--overwrite] [--dry-run]` generates numbered mock images (`mock_001.png`, etc.) using Pillow, streaming `Progress` and `BatchResult`, locking targets with `target_lock`, and recording non-`--dry-run` runs in `HistoryStore`.
+
+`pytoolbox file-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` and `pytoolbox folder-copy SOURCE DEST_DIR --count N [--format FMT] [--start N] [--overwrite] [--dry-run]` acquire `target_lock` across all expanded targets, stream `Progress` and `BatchResult`, and record non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0018](adr/0018-m4-2-to-m4-5.md).
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
