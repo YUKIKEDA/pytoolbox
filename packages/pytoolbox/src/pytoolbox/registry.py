@@ -87,6 +87,20 @@ CACHE_CLEAN = Tool(
     "Inspect or delete selected user caches (temp, pip, uv, npm, nuget, cargo).",
 )
 
+PORT = Tool(
+    "port",
+    System.OPERATIONS,
+    "Network",
+    "Check whether a host's TCP port is open and measure its response time.",
+)
+
+PING = Tool(
+    "ping",
+    System.OPERATIONS,
+    "Network",
+    "Send one ICMP echo to a host and report reachability and round-trip time.",
+)
+
 UDP = Tool(
     "udp",
     System.OPERATIONS,
@@ -103,6 +117,8 @@ TOOLS: tuple[Tool, ...] = (
     HARDCODING,
     FOLDER_SIZE,
     CACHE_CLEAN,
+    PORT,
+    PING,
     UDP,
 )
 """Every tool, in sidebar order. A tool row adds its entry here."""

@@ -908,3 +908,33 @@ button {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+.counts .status-ok {
+  border-left: 4px solid var(--success);
+
+  & dd {
+    color: var(--success);
+  }
+}
+
+.counts .status-bad {
+  border-left: 4px solid var(--danger);
+
+  & dd {
+    color: var(--danger);
+  }
+}
+
+.network-output {
+  min-height: 6rem;
+  max-height: 24rem;
+  margin: 0;
+  overflow: auto;
+  padding: var(--space);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
