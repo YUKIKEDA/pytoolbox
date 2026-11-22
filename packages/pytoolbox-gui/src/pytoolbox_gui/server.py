@@ -233,7 +233,12 @@ def create_app(
         if screen.stream is None:
             msg = f"{name} does not stream. Run it at /tools/{name}."
             raise InputError(msg)
-        stream = screen.stream(await read_form(request))
+        form = await read_form(request)
+        token = screens.set_state_root(active_history.path.parent)
+        try:
+            stream = screen.stream(form)
+        finally:
+            screens.reset_state_root(token)
         run = runs.start(stream)
         return HTMLResponse(render(Fragment("run.html", {**screen.context, "run_id": run.id})))
 

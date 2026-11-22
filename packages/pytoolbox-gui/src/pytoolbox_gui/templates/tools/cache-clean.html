@@ -1,0 +1,30 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/cache-clean/runs" hx-target="#cache-clean-run">
+  <section class="split-side">
+    <h2>Targets</h2>
+    <fieldset class="check-list">
+      <legend class="visually-hidden">Cache targets</legend>
+      {% for name, description in target_options %}
+      <label class="check-option">
+        <input type="checkbox" name="target" value="{{ name }}">
+        <span><code>{{ name }}</code> <span class="quiet">{{ description }}</span></span>
+      </label>
+      {% endfor %}
+    </fieldset>
+    <h2>Mode</h2>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Mode</legend>
+      <label>
+        <input type="checkbox" name="apply" value="true">
+        Apply (delete eligible files; unchecked runs dry-run)
+      </label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="cache-clean-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Select one or more cache targets and press Start.</p>
+  </section>
+</form>

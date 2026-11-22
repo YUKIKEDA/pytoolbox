@@ -1,0 +1,43 @@
+{% set failed_count = result.batch.failures | length %}
+<p>
+  {% if result.dry_run %}
+  Dry-run: {{ result.batch.succeeded }} files planned ({{ total_size }}, {{ result.total_bytes }} bytes){% if failed_count %}, {{ failed_count }} failed{% endif %}{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% else %}
+  Applied: {{ result.batch.succeeded }} files deleted ({{ total_size }}, {{ result.total_bytes }} bytes), {{ failed_count }} failed{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% endif %}
+</p>
+<dl class="counts cache-clean-counts">
+  <div><dt>Mode</dt><dd>{% if result.dry_run %}Dry-run{% else %}Applied{% endif %}</dd></div>
+  <div><dt>Files</dt><dd>{{ result.batch.succeeded }}</dd></div>
+  <div><dt>Total</dt><dd>{{ total_size }}</dd></div>
+  <div><dt>Failed</dt><dd>{{ failed_count }}</dd></div>
+</dl>
+{% if rows %}
+{% if result.items | length > rows | length %}
+<p class="quiet">Showing {{ rows | length }} of {{ result.items | length }} files. Use <code>pytoolbox cache-clean</code> for all.</p>
+{% endif %}
+<table class="result-table cache-clean-table">
+  <thead>
+    <tr><th scope="col">Target</th><th scope="col">Size</th><th scope="col">Path</th></tr>
+  </thead>
+  <tbody>
+    {% for item, size in rows %}
+    <tr>
+      <td><code>{{ item.target }}</code></td>
+      <td class="cache-clean-size" title="{{ item.bytes }} bytes">{{ size }}</td>
+      <td><code>{{ item.path }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="quiet">No eligible files found.</p>
+{% endif %}
+{% if result.batch.failures %}
+<h2>Failed ({{ failed_count }})</h2>
+<ul class="failures">
+  {% for failure in result.batch.failures %}
+  <li><code>{{ failure.path }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

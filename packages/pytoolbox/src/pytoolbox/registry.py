@@ -80,6 +80,13 @@ FOLDER_SIZE = Tool(
     "List a folder's direct files and folders, largest first, with each folder's total size.",
 )
 
+CACHE_CLEAN = Tool(
+    "cache-clean",
+    System.OPERATIONS,
+    "Cleanup",
+    "Inspect or delete selected user caches (temp, pip, uv, npm, nuget, cargo).",
+)
+
 PORT = Tool(
     "port",
     System.OPERATIONS,
@@ -109,6 +116,7 @@ TOOLS: tuple[Tool, ...] = (
     RESX_COMPARE,
     HARDCODING,
     FOLDER_SIZE,
+    CACHE_CLEAN,
     PORT,
     PING,
     UDP,
