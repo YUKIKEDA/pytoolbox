@@ -29,7 +29,7 @@ M4-1.
 | M4-8 | Add image-clip                                                   |       | Not started |
 | M4-9 | Add cache-clean                                                  |       | Not started |
 | M5-1 | Add the subprocess runner                                        | #69   | Done        |
-| M5-2 | Add ping and port                                                |       | Not started |
+| M5-2 | Add ping and port                                                | #77   | Done        |
 
 Each milestone is one stage of `docs/design.ja.md` §8. Each tool row ships its CLI command and its GUI screen together. Rows with no open dependency may run in parallel.
 

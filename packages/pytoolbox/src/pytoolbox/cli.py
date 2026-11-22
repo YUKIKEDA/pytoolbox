@@ -24,6 +24,7 @@ from pytoolbox.tools.dev.hardcoding import (
 from pytoolbox.tools.dev.regex import Group, Match, match_pattern
 from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
+from pytoolbox.tools.system import network
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -31,6 +32,8 @@ from pytoolbox.tools.system.folder_size import (
     human_size,
     to_csv,
 )
+from pytoolbox.tools.system.network import DEFAULT_TIMEOUT as NETWORK_DEFAULT_TIMEOUT
+from pytoolbox.tools.system.network import PingResult, PortResult
 from pytoolbox.tools.system.udp import DEFAULT_PORT as UDP_DEFAULT_PORT
 from pytoolbox.tools.system.udp import HOST as UDP_HOST
 from pytoolbox.tools.system.udp import listen_udp
@@ -261,6 +264,36 @@ def _folder_size(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_ping(result: PingResult) -> str:
+    """Render a ping result as `pytoolbox ping` prints it."""
+    if result.reachable:
+        latency = f" ({result.latency_ms:.1f} ms)" if result.latency_ms is not None else ""
+        summary = f"{result.host}: reachable{latency}"
+    else:
+        summary = f"{result.host}: unreachable"
+    return f"{summary}\n{result.output}" if result.output else summary
+
+
+def _ping(args: argparse.Namespace) -> int:
+    print(format_ping(network.ping_host(args.host, timeout=args.timeout)))
+    return 0
+
+
+def format_port(result: PortResult) -> str:
+    """Render a port check result as `pytoolbox port` prints it."""
+    target = f"{result.host}:{result.port}"
+    if result.is_open:
+        if result.latency_ms is None:
+            return f"{target}  open"
+        return f"{target}  open  {result.latency_ms:.1f} ms"
+    return f"{target}  closed  {result.detail}"
+
+
+def _port(args: argparse.Namespace) -> int:
+    print(format_port(network.check_port(args.host, args.port, timeout=args.timeout)))
+    return 0
+
+
 def _udp(args: argparse.Namespace) -> int:
     port: int = args.port
     session = listen_udp(port)
@@ -342,6 +375,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--csv", action="store_true", help="Print every item as CSV (UTF-8 with a BOM) instead."
     )
     sizes.set_defaults(handler=_folder_size)
+    port = commands.add_parser(registry.PORT.name, help=registry.PORT.summary)
+    port.add_argument("host", help="The host name or IP address.")
+    port.add_argument("port", type=int, help="The TCP port number, from 1 to 65535.")
+    port.add_argument(
+        "--timeout",
+        type=float,
+        default=NETWORK_DEFAULT_TIMEOUT,
+        metavar="SEC",
+        help=f"Timeout in seconds. Default: {NETWORK_DEFAULT_TIMEOUT:g}.",
+    )
+    port.set_defaults(handler=_port)
+    ping = commands.add_parser(registry.PING.name, help=registry.PING.summary)
+    ping.add_argument("host", help="The host name or IP address.")
+    ping.add_argument(
+        "--timeout",
+        type=float,
+        default=NETWORK_DEFAULT_TIMEOUT,
+        metavar="SEC",
+        help=f"Timeout in seconds. Default: {NETWORK_DEFAULT_TIMEOUT:g}.",
+    )
+    ping.set_defaults(handler=_ping)
     udp = commands.add_parser(registry.UDP.name, help=registry.UDP.summary)
     udp.add_argument(
         "--port", type=int, default=UDP_DEFAULT_PORT, help=f"Default: {UDP_DEFAULT_PORT}."

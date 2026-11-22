@@ -14,8 +14,9 @@ from pytoolbox import cli, registry
 from pytoolbox.errors import OperationError
 from pytoolbox.registry import System, Tool
 from pytoolbox.tools.dev.regex import Group, Match
-from pytoolbox.tools.system import udp
+from pytoolbox.tools.system import network, udp
 from pytoolbox.tools.system.folder_size import FolderSizeResult
+from pytoolbox.tools.system.network import PingResult, PortResult
 
 TOOLS = (
     Tool("text-count", System.DEVELOPER, "Text", "Count characters."),
@@ -124,7 +125,9 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
         "  Network",
-        f"    udp  {registry.UDP.summary}",
+        f"    port  {registry.PORT.summary}",
+        f"    ping  {registry.PING.summary}",
+        f"    udp   {registry.UDP.summary}",
     ]
 
 
@@ -458,3 +461,88 @@ def test_run_exits_with_the_code_of_main(monkeypatch: pytest.MonkeyPatch) -> Non
         cli.run()
 
     assert raised.value.code == 0
+
+
+def test_ping_prints_reachable_summary_and_output(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seen: list[tuple[str, float]] = []
+
+    def fake_ping(host: str, *, timeout: float = 3.0) -> PingResult:
+        seen.append((host, timeout))
+        return PingResult(host, reachable=True, latency_ms=12.34, output="Reply from 127.0.0.1")
+
+    monkeypatch.setattr(network, "ping_host", fake_ping)
+
+    assert cli.main(["ping", "127.0.0.1", "--timeout", "1.5"]) == 0
+    assert seen == [("127.0.0.1", 1.5)]
+    assert capsys.readouterr().out == "127.0.0.1: reachable (12.3 ms)\nReply from 127.0.0.1\n"
+
+
+def test_ping_prints_unreachable_and_exits_0(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def fake_ping(host: str, *, timeout: float = 3.0) -> PingResult:
+        del timeout
+        return PingResult(host, reachable=False, latency_ms=None, output="")
+
+    monkeypatch.setattr(network, "ping_host", fake_ping)
+
+    assert cli.main(["ping", "192.0.2.1"]) == 0
+    assert capsys.readouterr().out == "192.0.2.1: unreachable\n"
+
+
+def test_format_ping_handles_reachable_without_latency() -> None:
+    assert cli.format_ping(PingResult("host", True, None, "ok")) == "host: reachable\nok"
+
+
+def test_ping_exits_1_on_invalid_input_and_2_on_operation_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert cli.main(["ping", ""]) == 1
+    assert "error:" in capsys.readouterr().err
+    assert cli.main(["ping", "localhost", "--timeout", "0"]) == 1
+    assert "error:" in capsys.readouterr().err
+
+    def boom(host: str, *, timeout: float = 3.0) -> PingResult:
+        del host, timeout
+        msg = "Failed to run command 'ping'."
+        raise OperationError(msg)
+
+    monkeypatch.setattr(network, "ping_host", boom)
+
+    assert cli.main(["ping", "localhost"]) == 2
+    assert "Failed to run command" in capsys.readouterr().err
+
+
+def test_port_prints_open_and_closed_and_exits_0(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def fake_open(host: str, port: int, *, timeout: float = 3.0) -> PortResult:
+        del timeout
+        return PortResult(host, port, True, 4.26, "open")
+
+    monkeypatch.setattr(network, "check_port", fake_open)
+    assert cli.main(["port", "example.com", "443", "--timeout", "2"]) == 0
+    assert capsys.readouterr().out == "example.com:443  open  4.3 ms\n"
+
+    def fake_closed(host: str, port: int, *, timeout: float = 3.0) -> PortResult:
+        del timeout
+        return PortResult(host, port, False, None, "connection refused")
+
+    monkeypatch.setattr(network, "check_port", fake_closed)
+    assert cli.main(["port", "example.com", "443"]) == 0
+    assert capsys.readouterr().out == "example.com:443  closed  connection refused\n"
+
+
+def test_format_port_handles_open_without_latency() -> None:
+    assert cli.format_port(PortResult("example.com", 443, True, None, "open")) == (
+        "example.com:443  open"
+    )
+
+
+def test_port_invalid_inputs_exit_1(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["port", "example.com", "70000"]) == 1
+    assert "outside 1 to 65535" in capsys.readouterr().err
+    assert cli.main(["port", "", "443"]) == 1
+    assert "error:" in capsys.readouterr().err
