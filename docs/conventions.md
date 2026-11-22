@@ -114,7 +114,7 @@ pyright stays in `standard` mode, and these are errors: unknown parameter, argum
 
 ### Errors
 
-Hard failures raise. `InputError` is a bad argument or a missing path. `OperationError` is a failure while doing the work. Both subclass `PytoolboxError`. Messages are English.
+Hard failures raise. `InputError` is a bad argument or a missing path. `OperationError` is a failure while doing the work. Both subclass `PytoolboxError`. Messages are English. Windows words `OSError.strerror` in the PC's language, so map common OS errors (such as address in use, access denied, or a held lock) by `errno` to fixed English phrases instead of forwarding `strerror` verbatim.
 
 A batch that can fail on one item and continue returns `BatchResult`: how many succeeded, the failures (`path` and `message`), and `cancelled`. If the output directory itself cannot be created, raise `OperationError` and write nothing. Do not report that as an item failure.
 
