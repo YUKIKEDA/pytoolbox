@@ -6,7 +6,7 @@ Start the current row only. `docs/design.ja.md` §8 names the stages and §9 the
 
 ## Current work
 
-M3-1.
+M3-2.
 
 | ID   | Title                                                            | Issue | Status      |
 | ---- | ---------------------------------------------------------------- | ----- | ----------- |
@@ -17,8 +17,8 @@ M3-1.
 | M2-4 | Add hardcoding                                                   | #47   | Done        |
 | M2-5 | Add folder-size                                                  | #53   | Done        |
 | M2-6 | Add udp                                                          | #59   | Done        |
-| M3-1 | Add the per-target lock                                          |       | Next        |
-| M3-2 | Add the run history and its page                                 |       | Not started |
+| M3-1 | Add the per-target lock                                          | #64   | Done        |
+| M3-2 | Add the run history and its page                                 |       | Next        |
 | M4-1 | Add csv-gen                                                      |       | Not started |
 | M4-2 | Add json-gen                                                     |       | Not started |
 | M4-3 | Add mock-image                                                   |       | Not started |
