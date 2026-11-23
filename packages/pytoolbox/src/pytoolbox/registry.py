@@ -101,6 +101,13 @@ PDF_SPLIT = Tool(
     "Split a PDF file into one PDF file per page.",
 )
 
+IMAGE_CLIP = Tool(
+    "image-clip",
+    System.OPERATIONS,
+    "Files",
+    "Crop images in a folder to a pixel rectangle and write cropped_ files.",
+)
+
 FOLDER_SIZE = Tool(
     "folder-size",
     System.OPERATIONS,
@@ -147,6 +154,7 @@ TOOLS: tuple[Tool, ...] = (
     FILE_COPY,
     FOLDER_COPY,
     PDF_SPLIT,
+    IMAGE_CLIP,
     FOLDER_SIZE,
     CACHE_CLEAN,
     PORT,

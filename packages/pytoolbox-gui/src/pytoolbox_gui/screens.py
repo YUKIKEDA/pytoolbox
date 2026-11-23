@@ -17,6 +17,7 @@ from pytoolbox.registry import (
     FOLDER_COPY,
     FOLDER_SIZE,
     HARDCODING,
+    IMAGE_CLIP,
     JSON_GEN,
     MOCK_IMAGE,
     PDF_SPLIT,
@@ -67,6 +68,13 @@ from pytoolbox.tools.system.folder_size import (
     folder_size,
     human_size,
     to_csv,
+)
+from pytoolbox.tools.system.image_clip import (
+    ClipBox,
+    ImageClipResult,
+    clip_images,
+    first_preview_image,
+    parse_box,
 )
 from pytoolbox.tools.system.network import DEFAULT_TIMEOUT as NETWORK_DEFAULT_TIMEOUT
 from pytoolbox.tools.system.pdf_split import DEFAULT_FORMAT as PDF_SPLIT_DEFAULT_FORMAT
@@ -887,6 +895,84 @@ def stream_pdf_split(form: Form, *, state_root: Path | None = None) -> Stream:
     return stream
 
 
+def preview_image_clip(form: Form) -> Fragment:
+    """Inspect `input_dir` and render the first candidate image preview for `image-clip`.
+
+    Raises:
+        InputError: `input_dir` is empty, relative, missing, or has no readable images.
+    """
+    input_dir = path_field(form, "input_dir", "Input folder")
+    if input_dir is None:
+        msg = "Input folder: enter a path."
+        raise InputError(msg)
+    preview_path, width, height, data_uri = first_preview_image(input_dir)
+    return Fragment(
+        "tools/image-clip-preview.html",
+        {
+            "preview_name": preview_path.name,
+            "preview_path": preview_path,
+            "width": width,
+            "height": height,
+            "data_uri": data_uri,
+        },
+    )
+
+
+def image_clip_report(result: ImageClipResult) -> Report:
+    """Build the image-clip result fragment with cropped paths and clamped boxes."""
+    rows = result.items[:SHOWN_ITEMS]
+    return Report(
+        "tools/image-clip-result.html",
+        {"result": result, "rows": rows},
+    )
+
+
+def _clip_box_from_form(form: Form) -> ClipBox:
+    box_text = text_field(form, "box").strip()
+    if box_text:
+        return parse_box(box_text)
+    x1 = _int_field(form, "x1", "X1")
+    y1 = _int_field(form, "y1", "Y1")
+    x2 = _int_field(form, "x2", "X2")
+    y2 = _int_field(form, "y2", "Y2")
+    return ClipBox(x1, y1, x2, y2)
+
+
+def stream_image_clip(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start an image-clip run from the `image-clip` form.
+
+    Parameters are validated before the run starts.
+
+    Raises:
+        InputError: Any field is missing, relative, or invalid, or destination files exist.
+    """
+    input_dir = path_field(form, "input_dir", "Input folder")
+    if input_dir is None:
+        msg = "Input folder: enter a path."
+        raise InputError(msg)
+    output_dir = path_field(form, "output_dir", "Output folder")
+    box = _clip_box_from_form(form)
+
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = clip_images(
+        input_dir,
+        box,
+        output_dir=output_dir,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield image_clip_report(value) if isinstance(value, ImageClipResult) else value
+
+    return stream
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(
         CSV_GEN,
@@ -955,6 +1041,19 @@ SCREENS: tuple[Screen, ...] = (
         "document_split_hint",
         stream=stream_pdf_split,
         context={"default_format": PDF_SPLIT_DEFAULT_FORMAT},
+    ),
+    Screen(
+        IMAGE_CLIP,
+        "tools/image-clip.html",
+        "crop",
+        run=preview_image_clip,
+        stream=stream_image_clip,
+        context={
+            "default_x1": 0,
+            "default_y1": 0,
+            "default_x2": 100,
+            "default_y2": 100,
+        },
     ),
     Screen(FOLDER_SIZE, "tools/folder-size.html", "storage", stream=stream_folder_size),
     Screen(

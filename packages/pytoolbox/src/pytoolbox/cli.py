@@ -44,6 +44,11 @@ from pytoolbox.tools.system.folder_size import (
     human_size,
     to_csv,
 )
+from pytoolbox.tools.system.image_clip import (
+    ImageClipResult,
+    clip_images,
+    parse_box,
+)
 from pytoolbox.tools.system.network import DEFAULT_TIMEOUT as NETWORK_DEFAULT_TIMEOUT
 from pytoolbox.tools.system.network import PingResult, PortResult
 from pytoolbox.tools.system.pdf_split import (
@@ -630,6 +635,64 @@ def _pdf_split(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_image_clip(result: ImageClipResult) -> str:
+    """Render an image-clip result as `pytoolbox image-clip` prints it.
+
+    Args:
+        result: The image-clip outcome.
+
+    Returns:
+        One line per planned or cropped image, a blank line when non-empty, and the summary.
+    """
+    lines: list[str] = []
+    if result.items:
+        boxes = [
+            f"{item.box.x1},{item.box.y1},{item.box.x2},{item.box.y2}" for item in result.items
+        ]
+        box_width = max(len(b) for b in boxes)
+        lines.extend(
+            f"{b:<{box_width}}  {item.output}" for item, b in zip(result.items, boxes, strict=True)
+        )
+        lines.append("")
+    if result.dry_run:
+        summary = f"dry-run: {result.batch.succeeded} planned"
+    else:
+        summary = f"wrote: {result.batch.succeeded} cropped"
+    if result.batch.failures:
+        summary += f", {len(result.batch.failures)} failed"
+    if result.batch.cancelled:
+        summary += ", cancelled"
+    lines.append(summary)
+    return "\n".join(lines)
+
+
+def _image_clip(args: argparse.Namespace) -> int:
+    box = parse_box(args.box)
+    output_dir = Path(args.output_dir) if args.output_dir is not None else None
+    progress = sys.stderr.isatty()
+    for value in clip_images(
+        Path(args.input_dir),
+        box,
+        output_dir=output_dir,
+        overwrite=args.overwrite,
+        dry_run=args.dry_run,
+    ):
+        if isinstance(value, ImageClipResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            print(format_image_clip(value))
+            for failure in value.batch.failures:
+                print(f"failed: {failure.path}: {failure.message}", file=sys.stderr)
+        elif progress:
+            print(
+                f"\rimage-clip {value.completed}/{value.total}",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -861,6 +924,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--dry-run", action="store_true", help="Report planned paths without writing."
     )
     pdf_split.set_defaults(handler=_pdf_split)
+    image_clip = commands.add_parser(registry.IMAGE_CLIP.name, help=registry.IMAGE_CLIP.summary)
+    image_clip.add_argument("input_dir", help="Folder containing source images to crop.")
+    image_clip.add_argument(
+        "--box",
+        required=True,
+        metavar="X1,Y1,X2,Y2",
+        help="Pixel crop rectangle X1,Y1,X2,Y2.",
+    )
+    image_clip.add_argument(
+        "--output-dir",
+        metavar="DIR",
+        help="Destination folder. Default: input folder.",
+    )
+    image_clip.add_argument("--overwrite", action="store_true", help="Replace existing files.")
+    image_clip.add_argument(
+        "--dry-run", action="store_true", help="Report planned paths without writing."
+    )
+    image_clip.set_defaults(handler=_image_clip)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)
