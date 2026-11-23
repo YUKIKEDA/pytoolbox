@@ -14,6 +14,7 @@ from pytoolbox.registry import (
     CACHE_CLEAN,
     CSV_GEN,
     FILE_COPY,
+    FILE_MERGE,
     FOLDER_COPY,
     FOLDER_SIZE,
     HARDCODING,
@@ -60,6 +61,13 @@ from pytoolbox.tools.system import network
 from pytoolbox.tools.system.cleanup import CacheCleanResult, clean_caches
 from pytoolbox.tools.system.file_copy import DEFAULT_FORMAT as FILE_COPY_DEFAULT_FORMAT
 from pytoolbox.tools.system.file_copy import FileCopyResult, copy_file_batch
+from pytoolbox.tools.system.file_merge import (
+    DEFAULT_SEPARATOR as FILE_MERGE_DEFAULT_SEPARATOR,
+)
+from pytoolbox.tools.system.file_merge import (
+    FileMergeResult,
+    merge_files,
+)
 from pytoolbox.tools.system.folder_copy import DEFAULT_FORMAT as FOLDER_COPY_DEFAULT_FORMAT
 from pytoolbox.tools.system.folder_copy import FolderCopyResult, copy_folder_batch
 from pytoolbox.tools.system.folder_size import (
@@ -895,6 +903,71 @@ def stream_pdf_split(form: Form, *, state_root: Path | None = None) -> Stream:
     return stream
 
 
+def _path_lines_field(form: Form, name: str, label: str) -> list[Path]:
+    paths: list[Path] = []
+    for raw_line in text_field(form, name).splitlines():
+        text = raw_line.strip()
+        if len(text) > 1 and text.startswith('"') and text.endswith('"'):
+            text = text[1:-1].strip()
+        if not text:
+            continue
+        path = Path(text)
+        if not path.is_absolute():
+            msg = f"{label}: use an absolute path, not {text}."
+            raise InputError(msg)
+        paths.append(path)
+    return paths
+
+
+def file_merge_report(result: FileMergeResult) -> Report:
+    """Build the file-merge result fragment with the output path, counts, and input list."""
+    failed_paths = {failure.path: failure.message for failure in result.batch.failures}
+    rows = [(path, failed_paths.get(path)) for path in result.inputs[:SHOWN_ITEMS]]
+    return Report(
+        "tools/file-merge-result.html",
+        {"result": result, "rows": rows},
+    )
+
+
+def stream_file_merge(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start a file-merge run from the `file-merge` form.
+
+    Parameters are validated before the run starts.
+
+    Raises:
+        InputError: Any field is missing, relative, or invalid, or destination exists.
+    """
+    inputs = _path_lines_field(form, "inputs", "Input files")
+    if not inputs:
+        msg = "Input files: enter at least one path."
+        raise InputError(msg)
+    output_dir = path_field(form, "output_dir", "Output folder")
+    if output_dir is None:
+        msg = "Output folder: enter a path."
+        raise InputError(msg)
+    raw_sep = text_field(form, "sep")
+    separator = raw_sep if "sep" in form and raw_sep else FILE_MERGE_DEFAULT_SEPARATOR
+
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = merge_files(
+        inputs,
+        output_dir,
+        separator=separator,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield file_merge_report(value) if isinstance(value, FileMergeResult) else value
+
+    return stream
+
+
 def preview_image_clip(form: Form) -> Fragment:
     """Inspect `input_dir` and render the first candidate image preview for `image-clip`.
 
@@ -1041,6 +1114,13 @@ SCREENS: tuple[Screen, ...] = (
         "document_split_hint",
         stream=stream_pdf_split,
         context={"default_format": PDF_SPLIT_DEFAULT_FORMAT},
+    ),
+    Screen(
+        FILE_MERGE,
+        "tools/file-merge.html",
+        "merge",
+        stream=stream_file_merge,
+        context={"default_sep": FILE_MERGE_DEFAULT_SEPARATOR},
     ),
     Screen(
         IMAGE_CLIP,

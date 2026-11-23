@@ -101,6 +101,13 @@ PDF_SPLIT = Tool(
     "Split a PDF file into one PDF file per page.",
 )
 
+FILE_MERGE = Tool(
+    "file-merge",
+    System.OPERATIONS,
+    "Files",
+    "Merge text files with a separator into a timestamped UTF-8 file.",
+)
+
 IMAGE_CLIP = Tool(
     "image-clip",
     System.OPERATIONS,
@@ -154,6 +161,7 @@ TOOLS: tuple[Tool, ...] = (
     FILE_COPY,
     FOLDER_COPY,
     PDF_SPLIT,
+    FILE_MERGE,
     IMAGE_CLIP,
     FOLDER_SIZE,
     CACHE_CLEAN,

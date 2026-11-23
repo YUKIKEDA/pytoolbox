@@ -25,7 +25,7 @@ M4-3.
 | M4-4 | Add file-copy                                                    | #89   | Done        |
 | M4-5 | Add folder-copy                                                  | #90   | Done        |
 | M4-6 | Add pdf-split                                                    | #94   | Done        |
-| M4-7 | Add file-merge                                                   |       | Not started |
+| M4-7 | Add file-merge                                                   | #95   | Done        |
 | M4-8 | Add image-clip                                                   | #96   | Done        |
 | M4-9 | Add cache-clean                                                  | #83   | Done        |
 | M5-1 | Add the subprocess runner                                        | #69   | Done        |

@@ -15,7 +15,7 @@ Grill (when the design branches) → Issue → branch → work → PR → human 
 4. Acceptance text lives on the Issue. The roadmap keeps ID, title, Issue, and status only.
 5. Branch from `main` after a fetch: `git switch -c <branch> origin/main`. `git switch -c` alone starts from the branch that is checked out. The name is `type/<issue-number>-<slug>`. `type` is a Conventional Commits type.
 6. Open the PR in the same turn that the branch is pushed. Use `.github/pull_request_template.md`. Write `Closes #N` on its own line under `## Related`.
-7. A human reviews and squash-merges. An agent never merges.
+7. A human reviews and merges, or orders the agent to merge. An agent never merges without an explicit order.
 8. After the merge, delete the local and remote branch. A withdrawn prototype's branch is not a merged branch: post its diff on the Issue and leave the branch until the owner names it.
 9. Retrospective, below, before the next feature branch.
 
@@ -33,7 +33,7 @@ CI (`.github/workflows/ci.yml`) runs the three gates on Ubuntu and Windows. Afte
 - Copying acceptance text onto the roadmap.
 - Starting a roadmap row that reads `Set after Grill on #n`.
 - Adding or removing roadmap rows, or touching **Intentionally out of scope**, without a Grill.
-- Merging. Closing an Issue or PR without an imperative that names it.
+- Merging, or closing an Issue or PR, without an imperative that names it.
 - Ending a turn on a branch that has no Issue and no PR, or leaving files you created that are no longer needed.
 
 When the spec names the remaining work and **Current work** is None, write those rows in the turn that learns of it. That includes the turn the owner asks what is next. Do not answer in chat and leave `docs/roadmap.md` empty. A tool the spec does not name still needs a Grill.

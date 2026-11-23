@@ -1,0 +1,27 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/file-merge/runs" hx-target="#file-merge-run">
+  <section class="split-side">
+    <h2><label for="file-merge-inputs">Input files (one path per line)</label></h2>
+    <textarea id="file-merge-inputs" name="inputs" rows="7" spellcheck="false"
+              placeholder="C:\path\to\first.txt&#10;C:\path\to\second.txt" autofocus></textarea>
+    <h2><label for="file-merge-dir">Output folder</label></h2>
+    <input id="file-merge-dir" class="path-field" name="output_dir" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\output">
+    <h2><label for="file-merge-sep">Separator format</label></h2>
+    <input id="file-merge-sep" class="path-field" name="sep" spellcheck="false"
+           autocomplete="off" value="{{ default_sep }}">
+    <p class="quiet">Placeholders: <code>{name}</code>, <code>{stem}</code>, <code>{path}</code>, <code>{index}</code></p>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing file</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="file-merge-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter input file paths and an output folder, then press Start.</p>
+  </section>
+</form>

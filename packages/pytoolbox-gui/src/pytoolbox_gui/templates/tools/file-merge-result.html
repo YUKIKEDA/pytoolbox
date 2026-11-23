@@ -1,0 +1,39 @@
+{% set failed_count = result.batch.failures | length %}
+<p>
+  {% if result.dry_run %}
+  Dry-run for <code>{{ result.output }}</code>: {{ result.batch.succeeded }} readable inputs{% if failed_count %}, {{ failed_count }} failed{% endif %}{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% else %}
+  Wrote <code>{{ result.output }}</code>: {{ result.batch.succeeded }} merged, {{ failed_count }} failed{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% endif %}
+</p>
+<dl class="counts file-merge-counts">
+  <div><dt>Mode</dt><dd>{% if result.dry_run %}Dry-run{% else %}Written{% endif %}</dd></div>
+  <div><dt>Merged</dt><dd>{{ result.batch.succeeded }}</dd></div>
+  <div><dt>Failed</dt><dd>{{ failed_count }}</dd></div>
+</dl>
+{% if rows %}
+{% if result.inputs | length > rows | length %}
+<p class="quiet">Showing {{ rows | length }} of {{ result.inputs | length }} inputs. Use <code>pytoolbox file-merge</code> for all.</p>
+{% endif %}
+<table class="result-table file-merge-table">
+  <thead>
+    <tr><th scope="col">Status</th><th scope="col">Input path</th></tr>
+  </thead>
+  <tbody>
+    {% for path, error_message in rows %}
+    <tr>
+      <td>{% if error_message %}Failed ({{ error_message }}){% elif result.dry_run %}Planned{% else %}Merged{% endif %}</td>
+      <td><code>{{ path }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% if result.batch.failures %}
+<h2>Failed ({{ failed_count }})</h2>
+<ul class="failures">
+  {% for failure in result.batch.failures %}
+  <li><code>{{ failure.path }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
