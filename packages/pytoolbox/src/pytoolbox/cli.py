@@ -35,6 +35,8 @@ from pytoolbox.tools.system import network
 from pytoolbox.tools.system.cleanup import CACHE_TARGETS, CacheCleanResult, clean_caches
 from pytoolbox.tools.system.file_copy import DEFAULT_FORMAT as FILE_COPY_DEFAULT_FORMAT
 from pytoolbox.tools.system.file_copy import FileCopyResult, copy_file_batch
+from pytoolbox.tools.system.folder_copy import DEFAULT_FORMAT as FOLDER_COPY_DEFAULT_FORMAT
+from pytoolbox.tools.system.folder_copy import FolderCopyResult, copy_folder_batch
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -277,6 +279,56 @@ def _file_copy(args: argparse.Namespace) -> int:
         elif progress:
             print(
                 f"\rfile-copy {value.completed}/{value.total}",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+    return 0
+
+
+def format_folder_copy(result: FolderCopyResult) -> str:
+    """Render a folder-copy result as `pytoolbox folder-copy` prints it.
+
+    Args:
+        result: The folder-copy outcome.
+
+    Returns:
+        One line per planned or copied folder, a blank line when non-empty, and the summary.
+    """
+    lines = [str(path) for path in result.items]
+    if lines:
+        lines.append("")
+    mode = "dry-run" if result.dry_run else "applied"
+    verb = "planned" if result.dry_run else "copied"
+    summary = f"{mode}: {result.batch.succeeded} {verb}"
+    if result.batch.failures:
+        summary += f", {len(result.batch.failures)} failed"
+    if result.batch.cancelled:
+        summary += ", cancelled"
+    lines.append(summary)
+    return "\n".join(lines)
+
+
+def _folder_copy(args: argparse.Namespace) -> int:
+    progress = sys.stderr.isatty()
+    for value in copy_folder_batch(
+        Path(args.source),
+        Path(args.dest_dir),
+        args.count,
+        fmt=args.format,
+        start=args.start,
+        overwrite=args.overwrite,
+        dry_run=args.dry_run,
+    ):
+        if isinstance(value, FolderCopyResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            print(format_folder_copy(value))
+            for failure in value.batch.failures:
+                print(f"failed: {failure.path}: {failure.message}", file=sys.stderr)
+        elif progress:
+            print(
+                f"\rfolder-copy {value.completed}/{value.total}",
                 end="",
                 file=sys.stderr,
                 flush=True,
@@ -666,6 +718,28 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--dry-run", action="store_true", help="Report planned paths without copying."
     )
     file_copy.set_defaults(handler=_file_copy)
+    folder_copy = commands.add_parser(registry.FOLDER_COPY.name, help=registry.FOLDER_COPY.summary)
+    folder_copy.add_argument("source", help="Source folder path.")
+    folder_copy.add_argument("dest_dir", help="Destination directory path.")
+    folder_copy.add_argument(
+        "--count", type=int, required=True, metavar="N", help="Number of copies to create."
+    )
+    folder_copy.add_argument(
+        "--format",
+        default=FOLDER_COPY_DEFAULT_FORMAT,
+        metavar="FMT",
+        help=f"Target folder name format. Default: {FOLDER_COPY_DEFAULT_FORMAT}.",
+    )
+    folder_copy.add_argument(
+        "--start", type=int, default=1, metavar="N", help="Starting number. Default: 1."
+    )
+    folder_copy.add_argument(
+        "--overwrite", action="store_true", help="Replace existing target folders."
+    )
+    folder_copy.add_argument(
+        "--dry-run", action="store_true", help="Report planned target paths without copying."
+    )
+    folder_copy.set_defaults(handler=_folder_copy)
     sizes = commands.add_parser(registry.FOLDER_SIZE.name, help=registry.FOLDER_SIZE.summary)
     sizes.add_argument("folder", nargs="?", default=".", help="The folder. Default: here.")
     sizes.add_argument("--top", type=int, metavar="N", help="Print only the largest N items.")

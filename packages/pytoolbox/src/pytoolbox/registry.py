@@ -87,6 +87,13 @@ FILE_COPY = Tool(
     "Copy one file to numbered files in a destination folder.",
 )
 
+FOLDER_COPY = Tool(
+    "folder-copy",
+    System.OPERATIONS,
+    "Files",
+    "Copy one folder to numbered folders in a destination directory.",
+)
+
 PDF_SPLIT = Tool(
     "pdf-split",
     System.OPERATIONS,
@@ -138,6 +145,7 @@ TOOLS: tuple[Tool, ...] = (
     RESX_COMPARE,
     HARDCODING,
     FILE_COPY,
+    FOLDER_COPY,
     PDF_SPLIT,
     FOLDER_SIZE,
     CACHE_CLEAN,
