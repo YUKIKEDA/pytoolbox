@@ -13,6 +13,7 @@ from pytoolbox.errors import InputError, PytoolboxError
 from pytoolbox.registry import (
     CACHE_CLEAN,
     CSV_GEN,
+    FILE_COPY,
     FOLDER_SIZE,
     HARDCODING,
     IMAGE_CLIP,
@@ -55,6 +56,8 @@ from pytoolbox.tools.dev.resx import Status, compare_resx
 from pytoolbox.tools.dev.text import count_text
 from pytoolbox.tools.system import network
 from pytoolbox.tools.system.cleanup import CacheCleanResult, clean_caches
+from pytoolbox.tools.system.file_copy import DEFAULT_FORMAT as FILE_COPY_DEFAULT_FORMAT
+from pytoolbox.tools.system.file_copy import FileCopyResult, copy_file_batch
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -661,6 +664,64 @@ def _int_field(form: Form, name: str, label: str) -> int:
         raise InputError(msg) from None
 
 
+def file_copy_report(result: FileCopyResult) -> Report:
+    """Build the file-copy result fragment with the first planned or copied paths."""
+    rows = result.items[:SHOWN_ITEMS]
+    return Report("tools/file-copy-result.html", {"result": result, "rows": rows})
+
+
+def stream_file_copy(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start a file-copy batch from the `file-copy` form.
+
+    Inputs and destination paths are validated before the run starts.
+
+    Args:
+        form: Submitted form fields (`source`, `dest_dir`, `format`, `start`,
+            `count`, `dry_run`, and `overwrite`).
+        state_root: State directory override. Defaults to the request-bound state root.
+
+    Returns:
+        The SSE stream yielding `Progress` and the final `Report`.
+
+    Raises:
+        InputError: A path is missing or relative, numbers are invalid, format fails,
+            destinations collide or escape `dest_dir`, or targets exist without overwrite.
+    """
+    active_state = _state_root.get() if state_root is None else state_root
+    source = path_field(form, "source", "Source file")
+    if source is None:
+        msg = "Source file: enter a path."
+        raise InputError(msg)
+    dest_dir = path_field(form, "dest_dir", "Destination folder")
+    if dest_dir is None:
+        msg = "Destination folder: enter a path."
+        raise InputError(msg)
+
+    fmt = text_field(form, "format") if "format" in form else FILE_COPY_DEFAULT_FORMAT
+    start = _int_field(form, "start", "Start") if "start" in form else 1
+    count = _int_field(form, "count", "Count")
+
+    stops: list[Cancel] = []
+    values = copy_file_batch(
+        source,
+        dest_dir,
+        count,
+        fmt=fmt,
+        start=start,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield file_copy_report(value) if isinstance(value, FileCopyResult) else value
+
+    return stream
+
+
 def mock_image_report(result: MockImageResult) -> Report:
     """Build the mock-image result fragment with dimensions, sizes, and paths."""
     rows = [(item, human_size(item.bytes)) for item in result.items[:SHOWN_ITEMS]]
@@ -836,6 +897,17 @@ SCREENS: tuple[Screen, ...] = (
             "extensions": ", ".join(DEFAULT_EXTENSIONS),
             "exclude": ", ".join(DEFAULT_EXCLUDE),
             "kinds": KIND_NAMES,
+        },
+    ),
+    Screen(
+        FILE_COPY,
+        "tools/file-copy.html",
+        "document_copy",
+        stream=stream_file_copy,
+        context={
+            "default_format": FILE_COPY_DEFAULT_FORMAT,
+            "default_start": 1,
+            "default_count": 3,
         },
     ),
     Screen(
