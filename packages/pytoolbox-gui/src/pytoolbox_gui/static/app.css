@@ -1023,3 +1023,21 @@ button {
   text-align: right;
   white-space: nowrap;
 }
+
+.pdf-split-counts {
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+
+  & div {
+    gap: var(--space);
+  }
+}
+
+.pdf-split-table {
+  & th:nth-child(1) {
+    width: 4rem;
+  }
+
+  & td:nth-child(1) {
+    font-variant-numeric: tabular-nums;
+  }
+}

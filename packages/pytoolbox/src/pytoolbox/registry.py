@@ -94,6 +94,13 @@ FOLDER_COPY = Tool(
     "Copy one folder to numbered folders in a destination directory.",
 )
 
+PDF_SPLIT = Tool(
+    "pdf-split",
+    System.OPERATIONS,
+    "Files",
+    "Split a PDF file into one PDF file per page.",
+)
+
 FOLDER_SIZE = Tool(
     "folder-size",
     System.OPERATIONS,
@@ -139,6 +146,7 @@ TOOLS: tuple[Tool, ...] = (
     HARDCODING,
     FILE_COPY,
     FOLDER_COPY,
+    PDF_SPLIT,
     FOLDER_SIZE,
     CACHE_CLEAN,
     PORT,

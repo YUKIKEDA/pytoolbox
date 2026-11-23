@@ -24,7 +24,7 @@ M4-3.
 | M4-3 | Add mock-image                                                   | #88   | Done        |
 | M4-4 | Add file-copy                                                    | #89   | Done        |
 | M4-5 | Add folder-copy                                                  | #90   | Done        |
-| M4-6 | Add pdf-split                                                    |       | Not started |
+| M4-6 | Add pdf-split                                                    | #94   | Done        |
 | M4-7 | Add file-merge                                                   |       | Not started |
 | M4-8 | Add image-clip                                                   |       | Not started |
 | M4-9 | Add cache-clean                                                  | #83   | Done        |
