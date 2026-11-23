@@ -27,7 +27,10 @@ packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/templates/  shell, pane, and event fragments
   src/pytoolbox_gui/static/     app.css, htmx, the SSE extension, icons/ with its LICENSE
 packages/<name>/tests/  tests for that package
-docs/design.ja.md       the owner's draft spec, Japanese
+docs/tutorials.md       Diataxis tutorial: install and first steps (Japanese)
+docs/how-to.md          Diataxis how-to guides: task recipes (Japanese)
+docs/reference.md       Diataxis reference: CLI, GUI, and all tools (Japanese)
+docs/explanation.md     Diataxis explanation: concept, architecture, safety (Japanese)
 docs/roadmap.md         ID, title, Issue, status
 docs/adr/               one decision per file, NNNN-slug.md
 native-scripts/         created with the Issue that adds a shell script
@@ -42,7 +45,7 @@ A row that adds a module adds its line to this file in the same PR.
 
 ## Product
 
-Recorded in [docs/adr/0002-inventory-ui-license.md](adr/0002-inventory-ui-license.md). The tool list and the GUI stack live in `docs/design.ja.md`. The license is MIT (`LICENSE`).
+Recorded in [docs/adr/0002-inventory-ui-license.md](adr/0002-inventory-ui-license.md). The tool list and the GUI stack live in [docs/reference.md](reference.md) and [docs/explanation.md](explanation.md). The license is MIT (`LICENSE`).
 
 ## Toolchain
 
@@ -177,7 +180,7 @@ A test never starts the real GUI server: `pytoolbox gui` tests replace `serve`, 
 
 ### CLI
 
-argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/design.ja.md` §6). `pytoolbox list` prints each tool with its system and category (§5.1). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000` (§7.2).
+argparse. Exit `0` on success, `1` on `InputError`, `2` on `OperationError`. One level: `pytoolbox <tool>`, with no system prefix (`docs/reference.md`). `pytoolbox list` prints each tool with its system and category (`registry.py`). A tool row adds its CLI command and its GUI screen in the same PR. The GUI listens on `127.0.0.1:8000`.
 
 A usage error is `InputError` and exits `1`; the parser does not use argparse's own exit `2`. Ctrl+C exits `130` (128 plus `SIGINT`) with no traceback. Errors print `error: <message>` to stderr. Each subcommand names its handler with `set_defaults(handler=...)`, and `main` calls it with the parsed arguments; there is no fallback command. A subcommand's name and help come from the tool's constant in `registry`.
 
@@ -201,7 +204,7 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 
 `pytoolbox csv-gen OUTPUT --rows N --col NAME:TYPE [--col ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (`text`, `number`, `boolean`, `date`) as UTF-8 with a BOM. It locks the output target with `target_lock` and records non-`--dry-run` runs in `HistoryStore`. Recorded in [ADR 0017](adr/0017-ping-port-and-csv-gen.md).
 
-`pytoolbox json-gen OUTPUT --rows N --schema SCHEMA_OR_JSON [--col NAME:TYPE ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (supporting all 13 schema types in §9) as a UTF-8 JSON array without a BOM, holding `target_lock` on `OUTPUT` and recording non-`--dry-run` runs in `HistoryStore`.
+`pytoolbox json-gen OUTPUT --rows N --schema SCHEMA_OR_JSON [--col NAME:TYPE ...] [--seed S] [--overwrite] [--dry-run]` writes synthetic rows (supporting all 13 schema types in `docs/reference.md`) as a UTF-8 JSON array without a BOM, holding `target_lock` on `OUTPUT` and recording non-`--dry-run` runs in `HistoryStore`.
 
 `pytoolbox mock-image OUTPUT_DIR --width W --height H --count N [--random-ratio] [--format png|jpg] [--seed S] [--overwrite] [--dry-run]` generates numbered mock images (`mock_001.png`, etc.) using Pillow, streaming `Progress` and `BatchResult`, locking targets with `target_lock`, and recording non-`--dry-run` runs in `HistoryStore`.
 
@@ -217,7 +220,7 @@ A text tool takes its text as an optional argument. Without it, the tool reads s
 
 `pytoolbox list` prints the system at column 0, the category at 2, and `name  summary` at 4, with names padded to the longest in the category. Systems follow `System`; categories and tools follow `TOOLS`. An empty registry prints nothing and exits `0`.
 
-`pytoolbox gui` is the only command that starts the GUI. It imports `pytoolbox_gui` when called, so the core does not depend on it. If the package is missing, it prints the install command of §7.1 to stderr and exits `2`. If the port is in use, it exits `2` and opens no browser.
+`pytoolbox gui` is the only command that starts the GUI. It imports `pytoolbox_gui` when called, so the core does not depend on it. If the package is missing, it prints the install command (`uv tool install ./packages/pytoolbox --with ./packages/pytoolbox-gui`) to stderr and exits `2`. If the port is in use, it exits `2` and opens no browser.
 
 ### GUI HTTP
 
@@ -250,13 +253,13 @@ The GUI is a hypermedia API: it returns HTML for HTMX to swap, and its endpoints
 - Every request's `Host` must be `127.0.0.1:<port>` or `localhost:<port>`, or it returns `403`. This stops DNS rebinding. Every `POST` must carry an `Origin` of `http://127.0.0.1:<port>` or `http://localhost:<port>`; a missing or `null` `Origin` returns `403`. This stops other sites from posting to the server. No CORS headers are sent. Sources: [GitHub: Localhost dangers](https://github.blog/security/application-security/localhost-dangers-cors-and-dns-rebinding/), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 - HTMX and its SSE extension ship under `static/` at pinned versions, with the version in the file name (`htmx-2.0.11.min.js`, `htmx-ext-sse-2.2.4.min.js`). A new version is a new file whose SHA-384 matches the integrity value in the htmx docs. No CDN: the GUI has tools for a broken network, and it must load without one. Nothing in the frontend is built.
 - The CSS is one hand-written file, `static/app.css`, in plain CSS: custom properties for colors and spacing, grid for the layout, nesting where it helps. No CSS framework and no utility classes. Class names describe the part (`sidebar`, `pane`, `console`), not the look.
-- The look follows `docs/design.ja.md` §5: the OS light or dark setting through `light-dark()`, a sidebar that collapses to its icons, and cards on the home page.
+- The look follows `docs/reference.md`: the OS light or dark setting through `light-dark()`, a sidebar that collapses to its icons, and cards on the home page.
 - Search matches `q` against each tool's name and summary, case-insensitive, as a substring, with surrounding spaces ignored. An empty `q` returns every tool. The search box sends it with `hx-get` on `input changed delay:200ms, keyup[key=='Enter']`, so typing sends one request per pause and no script is written by hand. Search is a `GET` because it runs nothing. Source: [htmx Active Search](https://htmx.org/examples/active-search/).
 - `Logs & History` (`GET /history`) shows up to the latest 200 entries newest first in a table with local timestamps, tool name, status (`succeeded`, `partial`, `failed`, or `cancelled`), counts, and summary, filterable by tool name (`?tool=<tool>`). Arguments JSON and full error messages expand inside each row with `<details>`, and there is no button to clear history. On the home page (`GET /`), the recently used tools section shows up to 6 distinct tools from the history database, and is omitted when the database has no entries.
 - Icons are SVG files from [Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons) (MIT), size 20, `regular`, copied to `static/icons/` under their upstream file names (`ic_fluent_home_20_regular.svg`) with the upstream `LICENSE` beside them. They come from commit `4c94ad5f4081168c0d45bdc368f230ecb757cd09`; a newer icon is copied from a named commit, and this line is updated. Only icons in use are copied. A tool's icon is `Screen.icon`, the name between `ic_fluent_` and `_20_regular`. CSS draws an icon as a `mask` filled with `currentColor`, so it follows the theme.
 - Tests use `TestClient` and send `Host` and `Origin` as a browser would. A test also checks each `403` case.
 
-`cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/design.ja.md` §9.
+`cache-clean` takes one or more target names and touches only those names. No name, or an unknown name, is `InputError` and scans nothing. The default and `--dry-run` report paths and byte counts. `--apply` deletes. Paths and ages are in `docs/reference.md`.
 
 Generators (`csv-gen`, `json-gen`, `mock-image`) take an optional `seed: int | None`. Omit it and the output is not deterministic.
 

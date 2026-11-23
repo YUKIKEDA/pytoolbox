@@ -2,11 +2,11 @@
 
 The current row's ID lives only in this file. Acceptance text lives on the Issue.
 
-Start rows whose prerequisites are done; independent rows and design work may run in parallel. `docs/design.ja.md` §8 names the stages and §9 the initial tools. Their order is this table.
+Start rows whose prerequisites are done; independent rows and design work may run in parallel. See `docs/explanation.md` for architecture and `docs/reference.md` for tool contracts.
 
 ## Current work
 
-M4-3.
+None.
 
 | ID   | Title                                                            | Issue | Status      |
 | ---- | ---------------------------------------------------------------- | ----- | ----------- |
@@ -30,8 +30,9 @@ M4-3.
 | M4-9 | Add cache-clean                                                  | #83   | Done        |
 | M5-1 | Add the subprocess runner                                        | #69   | Done        |
 | M5-2 | Add ping and port                                                | #77   | Done        |
+| M5-3 | Reorganize documentation into Diataxis and finalize cleanup      | #100  | Done        |
 
-Each milestone is one stage of `docs/design.ja.md` §8. Each tool row ships its CLI command and its GUI screen together. Rows with no open dependency may run in parallel.
+Each milestone corresponds to a stage in `docs/explanation.md`. Each tool row ships its CLI command and its GUI screen together. Rows with no open dependency may run in parallel.
 
 ## Intentionally out of scope
 

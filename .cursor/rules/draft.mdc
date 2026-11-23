@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Draft
 
-`docs/design.ja.md` is the owner's draft. Its text is the owner's: the architecture, the directories, the CLI, the GUI, and the phases.
+`docs/explanation.md` and `docs/reference.md` hold the design and spec. Their text reflects the owner's decisions: the architecture, the directories, the CLI, the GUI, and the phases.
 
 Change it only when there is a reason from the product's requirements and the owner agreed in a Grill. A decision about something else, such as a tool list or a type contract, is not consent to rewrite the draft around it. When the two conflict, ask in a Grill. Do not pick one and rewrite the other.
 

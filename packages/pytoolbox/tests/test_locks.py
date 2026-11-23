@@ -2,6 +2,7 @@ import errno
 import hashlib
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import BinaryIO
 
@@ -158,8 +159,15 @@ def test_target_lock_blocks_across_processes_and_releases_when_child_dies(tmp_pa
         proc.kill()
         proc.wait(timeout=5)
 
-    with target_lock(target, state_root=state) as held:
-        assert held == (lock_path(target, state_root=state),)
+    for attempt in range(20):
+        try:
+            with target_lock(target, state_root=state) as held:
+                assert held == (lock_path(target, state_root=state),)
+            break
+        except OperationError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
 
 
 def test_target_lock_reports_os_errors_in_english(

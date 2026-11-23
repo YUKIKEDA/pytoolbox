@@ -15,4 +15,4 @@ Not allowed:
 - Closing a milestone while a temporary gap is still in the code.
 - A TODO comment that stands in for a roadmap row.
 
-When a row becomes `Done` or moves to **Intentionally out of scope**, search `docs/design.ja.md`, the READMEs, `docs/adr/`, and `.cursor/rules/` for its title and keywords, and rewrite the stale "until X" text in the same PR.
+When a row becomes `Done` or moves to **Intentionally out of scope**, search `docs/*.md`, the READMEs, `docs/adr/`, and `.cursor/rules/` for its title and keywords, and rewrite the stale "until X" text in the same PR.
