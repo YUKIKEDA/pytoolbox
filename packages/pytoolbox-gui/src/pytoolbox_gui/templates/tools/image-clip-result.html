@@ -1,0 +1,41 @@
+{% set failed_count = result.batch.failures | length %}
+<p>
+  {% if result.dry_run %}
+  Dry-run in <code>{{ result.output_dir }}</code>: {{ result.batch.succeeded }} images planned (box <code>{{ result.box.x1 }},{{ result.box.y1 }},{{ result.box.x2 }},{{ result.box.y2 }}</code>){% if failed_count %}, {{ failed_count }} failed{% endif %}{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% else %}
+  Cropped in <code>{{ result.output_dir }}</code>: {{ result.batch.succeeded }} images written (box <code>{{ result.box.x1 }},{{ result.box.y1 }},{{ result.box.x2 }},{{ result.box.y2 }}</code>), {{ failed_count }} failed{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% endif %}
+</p>
+<dl class="counts mock-image-counts">
+  <div><dt>Mode</dt><dd>{% if result.dry_run %}Dry-run{% else %}Cropped{% endif %}</dd></div>
+  <div><dt>Images</dt><dd>{{ result.batch.succeeded }}</dd></div>
+  <div><dt>Box</dt><dd><code>{{ result.box.x1 }},{{ result.box.y1 }},{{ result.box.x2 }},{{ result.box.y2 }}</code></dd></div>
+  <div><dt>Failed</dt><dd>{{ failed_count }}</dd></div>
+</dl>
+{% if rows %}
+{% if result.items | length > rows | length %}
+<p class="quiet">Showing {{ rows | length }} of {{ result.items | length }} images. Use <code>pytoolbox image-clip</code> for all.</p>
+{% endif %}
+<table class="result-table image-clip-table">
+  <thead>
+    <tr><th scope="col">Clamped box</th><th scope="col">Source</th><th scope="col">Output</th></tr>
+  </thead>
+  <tbody>
+    {% for item in rows %}
+    <tr>
+      <td><code>{{ item.box.x1 }},{{ item.box.y1 }},{{ item.box.x2 }},{{ item.box.y2 }}</code></td>
+      <td><code>{{ item.source.name }}</code></td>
+      <td><code>{{ item.output }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% if result.batch.failures %}
+<h2>Failed ({{ failed_count }})</h2>
+<ul class="failures">
+  {% for failure in result.batch.failures %}
+  <li><code>{{ failure.path }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

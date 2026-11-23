@@ -80,6 +80,13 @@ HARDCODING = Tool(
     "Find hard-coded strings, numbers, IPs, URLs, and email addresses in a folder's sources.",
 )
 
+IMAGE_CLIP = Tool(
+    "image-clip",
+    System.OPERATIONS,
+    "Files",
+    "Crop images in a folder to a pixel rectangle and write cropped_ files.",
+)
+
 FOLDER_SIZE = Tool(
     "folder-size",
     System.OPERATIONS,
@@ -123,6 +130,7 @@ TOOLS: tuple[Tool, ...] = (
     TEXT_COUNT,
     RESX_COMPARE,
     HARDCODING,
+    IMAGE_CLIP,
     FOLDER_SIZE,
     CACHE_CLEAN,
     PORT,

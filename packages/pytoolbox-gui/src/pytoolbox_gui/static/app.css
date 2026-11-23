@@ -974,3 +974,71 @@ button {
   text-align: right;
   white-space: nowrap;
 }
+
+.image-clip-input-row {
+  display: flex;
+  gap: var(--space);
+  align-items: center;
+
+  & .path-field {
+    flex: 1;
+  }
+
+  & button {
+    white-space: nowrap;
+  }
+}
+
+.image-clip-preview-area {
+  min-width: 0;
+}
+
+.image-clip-preview-card {
+  display: grid;
+  gap: var(--space);
+  padding: var(--space);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.image-clip-preview-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.image-clip-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+  line-height: 0;
+}
+
+.image-clip-img {
+  display: block;
+  max-width: 100%;
+  max-height: 20rem;
+  width: auto;
+  height: auto;
+}
+
+.image-clip-selection {
+  position: absolute;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  pointer-events: none;
+}
+
+.image-clip-table {
+  & th:nth-child(1) {
+    width: 9rem;
+  }
+
+  & th:nth-child(2) {
+    width: 28%;
+  }
+}

@@ -26,7 +26,7 @@ M4-3.
 | M4-5 | Add folder-copy                                                  |       | Not started |
 | M4-6 | Add pdf-split                                                    |       | Not started |
 | M4-7 | Add file-merge                                                   |       | Not started |
-| M4-8 | Add image-clip                                                   |       | Not started |
+| M4-8 | Add image-clip                                                   | #96   | Done        |
 | M4-9 | Add cache-clean                                                  | #83   | Done        |
 | M5-1 | Add the subprocess runner                                        | #69   | Done        |
 | M5-2 | Add ping and port                                                | #77   | Done        |

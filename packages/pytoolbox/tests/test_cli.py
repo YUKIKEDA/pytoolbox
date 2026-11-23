@@ -10,6 +10,7 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
+from PIL import Image
 
 import pytoolbox_gui.cli
 from pytoolbox import cli, registry
@@ -24,6 +25,7 @@ from pytoolbox.tools.dev.regex import Group, Match
 from pytoolbox.tools.system import network, udp
 from pytoolbox.tools.system.cleanup import CacheCleanResult, CacheItem
 from pytoolbox.tools.system.folder_size import FolderSizeResult
+from pytoolbox.tools.system.image_clip import ClipBox, ClippedImageItem, ImageClipResult
 from pytoolbox.tools.system.network import PingResult, PortResult
 
 TOOLS = (
@@ -139,6 +141,8 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
     ]
     assert lines[11:] == [
         "System Operations",
+        "  Files",
+        f"    image-clip  {registry.IMAGE_CLIP.summary}",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
         "  Cleanup",
@@ -887,4 +891,62 @@ def test_mock_image_dry_run_write_progress_and_errors(
         cli.main(["mock-image", str(out_dir), "--width", "60", "--height", "40", "--count", "1"])
         == 0
     )
+    assert capsys.readouterr().err == "failed: bad.png: access is denied\n"
+
+
+def test_image_clip_dry_run_write_progress_and_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(state))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    in_dir = tmp_path / "clip_in"
+    in_dir.mkdir()
+    Image.new("RGB", (100, 80), color=(20, 40, 60)).save(in_dir / "sample.png", format="PNG")
+
+    assert cli.main(["image-clip", str(in_dir), "--box", "10,10,50,40", "--dry-run"]) == 0
+    dry_out = capsys.readouterr().out
+    assert "10,10,50,40" in dry_out
+    assert "dry-run: 1 planned" in dry_out
+    assert not (in_dir / "cropped_sample.png").exists()
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    assert cli.main(["image-clip", str(in_dir), "--box", "10,10,50,40"]) == 0
+    captured = capsys.readouterr()
+    assert "wrote: 1 cropped" in captured.out
+    assert "\rimage-clip 1/1" in captured.err
+    assert captured.err.endswith("\r\033[K")
+    assert (in_dir / "cropped_sample.png").is_file()
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: False)
+    assert cli.main(["image-clip", str(in_dir), "--box", "10,10,50,40"]) == 1
+    assert "already exists" in capsys.readouterr().err
+
+    assert cli.main(["image-clip", str(in_dir), "--box", "0,0,30,30", "--overwrite"]) == 0
+    assert "wrote: 1 cropped" in capsys.readouterr().out
+
+    partial = ImageClipResult(
+        input_dir=in_dir,
+        output_dir=in_dir,
+        box=ClipBox(0, 0, 30, 30),
+        items=(
+            ClippedImageItem(
+                in_dir / "sample.png", in_dir / "cropped_sample.png", ClipBox(0, 0, 30, 30)
+            ),
+        ),
+        dry_run=False,
+        batch=BatchResult(1, (ItemFailure(Path("bad.png"), "access is denied"),), cancelled=True),
+    )
+    formatted = cli.format_image_clip(partial)
+    assert "wrote: 1 cropped, 1 failed, cancelled" in formatted
+
+    def fake_clip(
+        _input_dir: Path,
+        _box: ClipBox,
+        **_kwargs: object,
+    ) -> Iterator[ImageClipResult]:
+        yield partial
+
+    monkeypatch.setattr(cli, "clip_images", fake_clip)
+    assert cli.main(["image-clip", str(in_dir), "--box", "0,0,30,30"]) == 0
     assert capsys.readouterr().err == "failed: bad.png: access is denied\n"

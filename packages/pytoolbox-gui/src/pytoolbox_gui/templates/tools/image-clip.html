@@ -1,0 +1,53 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/image-clip/runs" hx-target="#image-clip-run">
+  <section class="split-side">
+    <h2><label for="image-clip-input-dir">Input folder</label></h2>
+    <div class="image-clip-input-row">
+      <input id="image-clip-input-dir" class="path-field" name="input_dir" spellcheck="false"
+             autocomplete="off" placeholder="C:\path\to\images" autofocus>
+      <button type="button" id="image-clip-load-preview"
+              hx-post="/tools/image-clip" hx-include="#image-clip-input-dir"
+              hx-target="#image-clip-preview-area">Load preview</button>
+    </div>
+    <h2><label for="image-clip-output-dir">Output folder (optional)</label></h2>
+    <input id="image-clip-output-dir" class="path-field" name="output_dir" spellcheck="false"
+           autocomplete="off" placeholder="Default: input folder (cropped_ prefix)">
+    <div class="mock-image-dims">
+      <div>
+        <h2><label for="image-clip-x1">X1 (px)</label></h2>
+        <input id="image-clip-x1" class="port-field" type="number" name="x1"
+               value="{{ default_x1 }}">
+      </div>
+      <div>
+        <h2><label for="image-clip-y1">Y1 (px)</label></h2>
+        <input id="image-clip-y1" class="port-field" type="number" name="y1"
+               value="{{ default_y1 }}">
+      </div>
+      <div>
+        <h2><label for="image-clip-x2">X2 (px)</label></h2>
+        <input id="image-clip-x2" class="port-field" type="number" name="x2"
+               value="{{ default_x2 }}">
+      </div>
+      <div>
+        <h2><label for="image-clip-y2">Y2 (px)</label></h2>
+        <input id="image-clip-y2" class="port-field" type="number" name="y2"
+               value="{{ default_y2 }}">
+      </div>
+    </div>
+    <div id="image-clip-preview-area" class="image-clip-preview-area">
+      <p class="quiet">Enter an input folder and press Load preview to drag-select a crop box on the first image.</p>
+    </div>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing files</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="image-clip-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter an input folder and crop rectangle, then press Start.</p>
+  </section>
+</form>
