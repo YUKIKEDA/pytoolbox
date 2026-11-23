@@ -80,6 +80,13 @@ HARDCODING = Tool(
     "Find hard-coded strings, numbers, IPs, URLs, and email addresses in a folder's sources.",
 )
 
+FILE_COPY = Tool(
+    "file-copy",
+    System.OPERATIONS,
+    "Files",
+    "Copy one file to numbered files in a destination folder.",
+)
+
 FILE_MERGE = Tool(
     "file-merge",
     System.OPERATIONS,
@@ -130,6 +137,7 @@ TOOLS: tuple[Tool, ...] = (
     TEXT_COUNT,
     RESX_COMPARE,
     HARDCODING,
+    FILE_COPY,
     FILE_MERGE,
     FOLDER_SIZE,
     CACHE_CLEAN,
