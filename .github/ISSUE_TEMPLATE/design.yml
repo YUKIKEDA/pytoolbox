@@ -1,5 +1,5 @@
 name: Design
-description: A change to docs/design.ja.md only
+description: A change to docs/explanation.md or docs/reference.md only
 title: "[design] "
 labels: ["type:docs"]
 body:
@@ -20,7 +20,7 @@ body:
     id: design
     attributes:
       label: Design section
-      placeholder: "docs/design.ja.md §6"
+      placeholder: "docs/explanation.md or docs/reference.md"
     validations:
       required: true
   - type: textarea

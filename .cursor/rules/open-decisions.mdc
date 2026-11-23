@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Open decisions
 
-Elementary conventions are decided in the turn they come up. Types, errors, tests, paths, encoding, CLI exit codes, and a behavior difference already named in the spec are in that set. Write the decision into `docs/conventions.md` or `docs/design.ja.md` in that turn. Do not answer with a menu and wait.
+Elementary conventions are decided in the turn they come up. Types, errors, tests, paths, encoding, CLI exit codes, and a behavior difference already named in the spec are in that set. Write the decision into `docs/conventions.md` or `docs/reference.md` in that turn. Do not answer with a menu and wait.
 
 Ask only when the choice adds or removes a tool from the inventory.
 

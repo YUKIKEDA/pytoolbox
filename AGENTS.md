@@ -6,7 +6,7 @@ Personal toolbox: a Python core library and CLI, and a web GUI planned beside it
 
 | What                           | Where                                                            |
 | ------------------------------ | ---------------------------------------------------------------- |
-| Design (draft, Japanese)       | `docs/design.ja.md`. The owner's draft; change it through a Grill |
+| User docs & design (Japanese)  | `docs/tutorials.md`, `docs/how-to.md`, `docs/reference.md`, `docs/explanation.md`. Change meaning through a Grill |
 | Order and status of work       | `docs/roadmap.md`                                                |
 | Modules and toolchain          | `docs/conventions.md`                                            |
 | Why a decision was made        | `docs/adr/` (`0001-...`, one decision per file)                  |
@@ -41,7 +41,7 @@ Read the rules that match the work. `alwaysApply` rules apply to every change. A
 | `concept`              | The spec's concept stays in the owner's words                           |
 | `draft`                | Change the owner's draft only with a reason and agreement from a Grill  |
 | `sources`              | Read and cite the official source before recommending a library's use   |
-| `gui`                  | Settle a screen's look in §5 first; check GUI changes in a browser      |
+| `gui`                  | Settle a screen's look in `docs/reference.md` first; check GUI changes in a browser |
 
 ## Skills
 

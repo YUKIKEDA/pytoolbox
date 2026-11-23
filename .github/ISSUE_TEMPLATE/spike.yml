@@ -22,7 +22,7 @@ body:
     id: design
     attributes:
       label: Design section
-      placeholder: "docs/design.ja.md §3"
+      placeholder: "docs/explanation.md"
   - type: textarea
     id: depends
     attributes:

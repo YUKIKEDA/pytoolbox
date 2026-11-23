@@ -10,11 +10,11 @@ uv workspace. The root is not a published package. Do not create empty files ahe
 ```text
 packages/pytoolbox/     core library
 packages/<name>/tests/  tests for that package
-docs/                   design.ja.md, roadmap.md, conventions.md, adr/
+docs/                   tutorials.md, how-to.md, reference.md, explanation.md, roadmap.md, conventions.md, adr/
 native-scripts/         only when an Issue adds a shell script
 ```
 
-- `docs/design.ja.md` is the draft spec. `docs/roadmap.md` lists work: ID, title, Issue, status. `docs/conventions.md` holds the directory tree and the toolchain.
+- `docs/tutorials.md`, `docs/how-to.md`, `docs/reference.md`, and `docs/explanation.md` are user-facing Diataxis documentation in Japanese. `docs/roadmap.md` lists work: ID, title, Issue, status. `docs/conventions.md` holds the directory tree and the toolchain.
 - `packages/pytoolbox-gui` is the GUI. A tool row adds its screen there in the same PR as its CLI command.
 - Do not add a dependency the design does not name. A new dependency is a design change first.
 - A rule states a working constraint. It does not copy the spec's tool list or function list.

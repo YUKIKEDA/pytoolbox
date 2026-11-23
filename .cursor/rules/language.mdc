@@ -1,5 +1,5 @@
 ---
-description: English code, process docs, and roadmap; Japanese spec; bilingual README
+description: English code, process docs, and roadmap; Japanese user docs; bilingual README
 alwaysApply: true
 ---
 
@@ -17,14 +17,8 @@ Write these in English:
 
 Chat with the owner is in Japanese, including reports and Grill questions. Issue bodies, PR bodies, and commit subjects may be Japanese.
 
-## Bilingual documents
+## User and internal docs
 
-The README is the one pair: `README.md` and `README.ja.md`. English is the source of truth. Change both files in the same PR. Headings stay English. Do not add a Japanese copy of another file without the owner's order.
-
-Do not add `CONTRIBUTING.md`. The owner's process is `AGENTS.md` and `.cursor/rules/`.
-
-Keep the language switch line at the top of both README files. A Japanese-only change must not change the meaning.
-
-## Spec
-
-`docs/design.ja.md` is the spec, in Japanese. Do not add `docs/design.md` until a roadmap row says to translate it. ADRs are English.
+- `README.md` and `README.ja.md` are the bilingual pair. English is the source of truth. Change both files in the same PR. Headings stay English. Keep the language switch line at the top of both files.
+- `docs/tutorials.md`, `docs/how-to.md`, `docs/reference.md`, and `docs/explanation.md` are the user-facing Diataxis documents, in Japanese.
+- `docs/conventions.md`, `docs/roadmap.md`, and `docs/adr/` are internal developer documents, in English. Do not add Japanese copies of internal docs or `CONTRIBUTING.md`. The owner's process is `AGENTS.md` and `.cursor/rules/`.
