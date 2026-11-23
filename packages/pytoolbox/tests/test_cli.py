@@ -23,6 +23,7 @@ from pytoolbox.tools.dev.mock_image import MockImageItem, MockImageResult
 from pytoolbox.tools.dev.regex import Group, Match
 from pytoolbox.tools.system import network, udp
 from pytoolbox.tools.system.cleanup import CacheCleanResult, CacheItem
+from pytoolbox.tools.system.file_copy import FileCopyResult
 from pytoolbox.tools.system.folder_size import FolderSizeResult
 from pytoolbox.tools.system.network import PingResult, PortResult
 
@@ -139,6 +140,8 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
     ]
     assert lines[11:] == [
         "System Operations",
+        "  Files",
+        f"    file-copy  {registry.FILE_COPY.summary}",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
         "  Cleanup",
@@ -763,6 +766,149 @@ def test_json_gen_dry_run_and_write(
 
     assert cli.main(["json-gen", str(out), "--rows", "1", "--col", "id:uuid", "--overwrite"]) == 0
     assert f"wrote: {out.resolve()} (1 rows)" in capsys.readouterr().out
+
+
+def test_file_copy_dry_run_copy_overwrite_and_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(state))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    src = tmp_path / "note.txt"
+    src.write_text("hello", encoding="utf-8")
+    dest = tmp_path / "copies"
+
+    assert (
+        cli.main(["file-copy", str(src), str(dest), "--count", "2", "--start", "3", "--dry-run"])
+        == 0
+    )
+    dry_out = capsys.readouterr().out
+    assert str(dest.resolve() / "note_003.txt") in dry_out
+    assert str(dest.resolve() / "note_004.txt") in dry_out
+    assert "dry-run: 2 planned" in dry_out
+    assert not dest.exists()
+    assert not HistoryStore(state_root=state_dir()).path.exists()
+
+    assert (
+        cli.main(
+            [
+                "file-copy",
+                str(src),
+                str(dest),
+                "--count",
+                "2",
+                "--format",
+                "item_{n}{suffix}",
+                "--start",
+                "5",
+            ]
+        )
+        == 0
+    )
+    copy_out = capsys.readouterr().out
+    assert "copied: 2 files" in copy_out
+    assert (dest / "item_5.txt").read_text(encoding="utf-8") == "hello"
+    assert (dest / "item_6.txt").read_text(encoding="utf-8") == "hello"
+    runs = HistoryStore(state_root=state_dir()).list_runs()
+    assert len(runs) == 1
+    assert runs[0].tool == "file-copy"
+
+    assert (
+        cli.main(
+            [
+                "file-copy",
+                str(src),
+                str(dest),
+                "--count",
+                "1",
+                "--format",
+                "item_{n}{suffix}",
+                "--start",
+                "5",
+            ]
+        )
+        == 1
+    )
+    assert "already exists" in capsys.readouterr().err
+
+    src.write_text("updated", encoding="utf-8")
+    assert (
+        cli.main(
+            [
+                "file-copy",
+                str(src),
+                str(dest),
+                "--count",
+                "1",
+                "--format",
+                "item_{n}{suffix}",
+                "--start",
+                "5",
+                "--overwrite",
+            ]
+        )
+        == 0
+    )
+    assert (dest / "item_5.txt").read_text(encoding="utf-8") == "updated"
+
+    assert cli.main(["file-copy", "", str(dest), "--count", "1"]) == 1
+    assert "Source path must not be empty" in capsys.readouterr().err
+    assert cli.main(["file-copy", str(src), "", "--count", "1"]) == 1
+    assert "Destination folder must not be empty" in capsys.readouterr().err
+
+    locked_target = dest.resolve() / "note_001.txt"
+    with target_lock(locked_target, state_root=state_dir()):
+        assert cli.main(["file-copy", str(src), str(dest), "--count", "1"]) == 2
+        assert "Target is locked by another run" in capsys.readouterr().err
+
+
+def test_file_copy_shows_terminal_progress_and_formats_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(state))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    src = tmp_path / "a.txt"
+    src.write_text("x", encoding="utf-8")
+    dest = tmp_path / "out"
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    assert cli.main(["file-copy", str(src), str(dest), "--count", "1", "--dry-run"]) == 0
+    captured = capsys.readouterr()
+    assert "\rfile-copy 1/1" in captured.err
+    assert captured.err.endswith("\r\033[K")
+
+    partial_result = FileCopyResult(
+        source=src.resolve(),
+        dest_dir=dest.resolve(),
+        items=(dest / "a_001.txt",),
+        dry_run=False,
+        batch=BatchResult(
+            1, (ItemFailure(dest / "a_002.txt", "access is denied"),), cancelled=True
+        ),
+    )
+    formatted = cli.format_file_copy(partial_result)
+    assert "copied: 1 files, 1 failed, cancelled" in formatted
+    assert (
+        cli.format_file_copy(
+            FileCopyResult(
+                source=src.resolve(),
+                dest_dir=dest.resolve(),
+                items=(),
+                dry_run=False,
+                batch=BatchResult(0, (ItemFailure(dest / "a_001.txt", "access is denied"),)),
+            )
+        )
+        == "copied: 0 files, 1 failed"
+    )
+
+    def fake_copy(*_args: object, **_kwargs: object) -> Iterator[FileCopyResult]:
+        yield partial_result
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: False)
+    monkeypatch.setattr(cli, "copy_file_batch", fake_copy)
+    assert cli.main(["file-copy", str(src), str(dest), "--count", "2"]) == 0
+    assert capsys.readouterr().err == f"failed: {dest / 'a_002.txt'}: access is denied\n"
 
 
 def test_mock_image_dry_run_write_progress_and_errors(
