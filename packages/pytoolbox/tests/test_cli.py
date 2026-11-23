@@ -23,6 +23,7 @@ from pytoolbox.tools.dev.mock_image import MockImageItem, MockImageResult
 from pytoolbox.tools.dev.regex import Group, Match
 from pytoolbox.tools.system import network, udp
 from pytoolbox.tools.system.cleanup import CacheCleanResult, CacheItem
+from pytoolbox.tools.system.file_merge import FileMergeResult
 from pytoolbox.tools.system.folder_size import FolderSizeResult
 from pytoolbox.tools.system.network import PingResult, PortResult
 
@@ -139,6 +140,8 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
     ]
     assert lines[11:] == [
         "System Operations",
+        "  Files",
+        f"    file-merge  {registry.FILE_MERGE.summary}",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
         "  Cleanup",
@@ -888,3 +891,70 @@ def test_mock_image_dry_run_write_progress_and_errors(
         == 0
     )
     assert capsys.readouterr().err == "failed: bad.png: access is denied\n"
+
+
+def test_file_merge_dry_run_write_progress_and_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(state))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    a = tmp_path / "a.txt"
+    b = tmp_path / "b.txt"
+    missing = tmp_path / "missing.txt"
+    a.write_text("first", encoding="utf-8")
+    b.write_text("second", encoding="utf-8")
+    out_dir = tmp_path / "merged_out"
+
+    assert (
+        cli.main(
+            [
+                "file-merge",
+                str(a),
+                str(missing),
+                "--output-dir",
+                str(out_dir),
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    dry_captured = capsys.readouterr()
+    assert dry_captured.out.startswith("dry-run: ")
+    assert "(1 inputs, 1 failed)" in dry_captured.out
+    assert f"failed: {missing.resolve()}: path was not found" in dry_captured.err
+    assert not out_dir.exists()
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    assert (
+        cli.main(
+            [
+                "file-merge",
+                str(a),
+                str(b),
+                "--output-dir",
+                str(out_dir),
+                "--sep",
+                "=== {name} ===",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr()
+    assert captured.out.startswith("wrote: ")
+    assert "(2 merged, 0 failed)" in captured.out
+    assert "\rfile-merge 1/2" in captured.err
+    assert captured.err.endswith("\r\033[K")
+    written = list(out_dir.glob("merged_*.txt"))
+    assert len(written) == 1
+    assert written[0].read_text("utf-8") == "=== a.txt ===\nfirst\n\n=== b.txt ===\nsecond\n"
+
+    partial = FileMergeResult(
+        inputs=(a, missing),
+        output=out_dir / "merged_20261123_120000.txt",
+        dry_run=False,
+        batch=BatchResult(1, (ItemFailure(missing, "path was not found"),), cancelled=True),
+    )
+    assert (
+        cli.format_file_merge(partial) == f"wrote: {partial.output} (1 merged, 1 failed, cancelled)"
+    )

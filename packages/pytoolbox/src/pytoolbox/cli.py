@@ -33,6 +33,13 @@ from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
 from pytoolbox.tools.system import network
 from pytoolbox.tools.system.cleanup import CACHE_TARGETS, CacheCleanResult, clean_caches
+from pytoolbox.tools.system.file_merge import (
+    DEFAULT_SEPARATOR as FILE_MERGE_DEFAULT_SEPARATOR,
+)
+from pytoolbox.tools.system.file_merge import (
+    FileMergeResult,
+    merge_files,
+)
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -465,6 +472,41 @@ def _mock_image(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_file_merge(result: FileMergeResult) -> str:
+    """Render a file-merge result as `pytoolbox file-merge` prints it."""
+    mode = "dry-run" if result.dry_run else "wrote"
+    noun = "inputs" if result.dry_run else "merged"
+    failed = len(result.batch.failures)
+    cancelled = ", cancelled" if result.batch.cancelled else ""
+    return f"{mode}: {result.output} ({result.batch.succeeded} {noun}, {failed} failed{cancelled})"
+
+
+def _file_merge(args: argparse.Namespace) -> int:
+    progress = sys.stderr.isatty()
+    inputs = [Path(raw) for raw in args.inputs]
+    for value in merge_files(
+        inputs,
+        Path(args.output_dir),
+        separator=args.sep,
+        overwrite=args.overwrite,
+        dry_run=args.dry_run,
+    ):
+        if isinstance(value, FileMergeResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            print(format_file_merge(value))
+            for failure in value.batch.failures:
+                print(f"failed: {failure.path}: {failure.message}", file=sys.stderr)
+        elif progress:
+            print(
+                f"\rfile-merge {value.completed}/{value.total}",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -636,6 +678,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--dry-run", action="store_true", help="Report planned paths without writing."
     )
     mock_image.set_defaults(handler=_mock_image)
+    file_merge = commands.add_parser(registry.FILE_MERGE.name, help=registry.FILE_MERGE.summary)
+    file_merge.add_argument(
+        "inputs",
+        nargs="+",
+        metavar="INPUT",
+        help="Input text files to merge in order.",
+    )
+    file_merge.add_argument(
+        "--output-dir",
+        required=True,
+        metavar="DIR",
+        help="Destination directory for merged_YYYYMMDD_HHMMSS.txt.",
+    )
+    file_merge.add_argument(
+        "--sep",
+        default=FILE_MERGE_DEFAULT_SEPARATOR,
+        metavar="FMT",
+        help=f"Section separator format string. Default: {FILE_MERGE_DEFAULT_SEPARATOR!r}.",
+    )
+    file_merge.add_argument(
+        "--overwrite", action="store_true", help="Replace an existing destination file."
+    )
+    file_merge.add_argument(
+        "--dry-run", action="store_true", help="Inspect inputs and report output without writing."
+    )
+    file_merge.set_defaults(handler=_file_merge)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)

@@ -80,6 +80,13 @@ HARDCODING = Tool(
     "Find hard-coded strings, numbers, IPs, URLs, and email addresses in a folder's sources.",
 )
 
+FILE_MERGE = Tool(
+    "file-merge",
+    System.OPERATIONS,
+    "Files",
+    "Merge text files with a separator into a timestamped UTF-8 file.",
+)
+
 FOLDER_SIZE = Tool(
     "folder-size",
     System.OPERATIONS,
@@ -123,6 +130,7 @@ TOOLS: tuple[Tool, ...] = (
     TEXT_COUNT,
     RESX_COMPARE,
     HARDCODING,
+    FILE_MERGE,
     FOLDER_SIZE,
     CACHE_CLEAN,
     PORT,
