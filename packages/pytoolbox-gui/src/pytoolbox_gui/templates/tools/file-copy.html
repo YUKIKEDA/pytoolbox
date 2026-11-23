@@ -1,0 +1,36 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+{#- No min/max/required so invalid inputs reach the server and show #error (docs/design.ja.md §5). -#}
+<form class="split" hx-post="/tools/file-copy/runs" hx-target="#file-copy-run">
+  <section class="split-side">
+    <h2><label for="file-copy-source">Source file</label></h2>
+    <input id="file-copy-source" class="path-field" name="source" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\file.txt" autofocus>
+    <h2><label for="file-copy-dest-dir">Destination folder</label></h2>
+    <input id="file-copy-dest-dir" class="path-field" name="dest_dir" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\output">
+    <h2><label for="file-copy-format">Format</label></h2>
+    <input id="file-copy-format" class="path-field" name="format" spellcheck="false"
+           autocomplete="off" value="{{ default_format }}">
+    <p class="quiet">
+      Placeholders: <code>{stem}</code>, <code>{suffix}</code>, <code>{name}</code>, <code>{n}</code>
+    </p>
+    <h2><label for="file-copy-start">Start</label></h2>
+    <input id="file-copy-start" class="port-field" type="number" name="start"
+           value="{{ default_start }}" autocomplete="off">
+    <h2><label for="file-copy-count">Count</label></h2>
+    <input id="file-copy-count" class="port-field" type="number" name="count"
+           value="{{ default_count }}" autocomplete="off">
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing files</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="file-copy-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Enter a source file, destination folder, and copy options, then press Start.</p>
+  </section>
+</form>

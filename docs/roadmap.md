@@ -22,7 +22,7 @@ M4-3.
 | M4-1 | Add csv-gen                                                      | #78   | Done        |
 | M4-2 | Add json-gen                                                     | #84   | Done        |
 | M4-3 | Add mock-image                                                   | #88   | Done        |
-| M4-4 | Add file-copy                                                    |       | Not started |
+| M4-4 | Add file-copy                                                    | #89   | Done        |
 | M4-5 | Add folder-copy                                                  | #90   | Done        |
 | M4-6 | Add pdf-split                                                    |       | Not started |
 | M4-7 | Add file-merge                                                   |       | Not started |
