@@ -87,11 +87,32 @@ FILE_COPY = Tool(
     "Copy one file to numbered files in a destination folder.",
 )
 
+FOLDER_COPY = Tool(
+    "folder-copy",
+    System.OPERATIONS,
+    "Files",
+    "Copy one folder to numbered folders in a destination directory.",
+)
+
+PDF_SPLIT = Tool(
+    "pdf-split",
+    System.OPERATIONS,
+    "Files",
+    "Split a PDF file into one PDF file per page.",
+)
+
 FILE_MERGE = Tool(
     "file-merge",
     System.OPERATIONS,
     "Files",
     "Merge text files with a separator into a timestamped UTF-8 file.",
+)
+
+IMAGE_CLIP = Tool(
+    "image-clip",
+    System.OPERATIONS,
+    "Files",
+    "Crop images in a folder to a pixel rectangle and write cropped_ files.",
 )
 
 FOLDER_SIZE = Tool(
@@ -138,7 +159,10 @@ TOOLS: tuple[Tool, ...] = (
     RESX_COMPARE,
     HARDCODING,
     FILE_COPY,
+    FOLDER_COPY,
+    PDF_SPLIT,
     FILE_MERGE,
+    IMAGE_CLIP,
     FOLDER_SIZE,
     CACHE_CLEAN,
     PORT,

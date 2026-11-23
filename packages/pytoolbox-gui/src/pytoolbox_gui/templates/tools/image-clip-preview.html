@@ -1,0 +1,104 @@
+{% from "macros.html" import clear_error %}{{ clear_error() }}
+<div class="image-clip-preview-card">
+  <p class="image-clip-preview-meta">
+    Preview: <code>{{ preview_name }}</code> (<code>{{ width }}&times;{{ height }}</code> px) — drag on the image to select crop bounds.
+  </p>
+  <div id="image-clip-stage" class="image-clip-stage"
+       data-natural-width="{{ width }}" data-natural-height="{{ height }}">
+    <img id="image-clip-img" class="image-clip-img" src="{{ data_uri }}"
+         alt="Preview of {{ preview_name }}" draggable="false">
+    <div id="image-clip-selection" class="image-clip-selection"></div>
+  </div>
+</div>
+<script>
+(function () {
+  const stage = document.getElementById("image-clip-stage");
+  const selection = document.getElementById("image-clip-selection");
+  const x1Input = document.getElementById("image-clip-x1");
+  const y1Input = document.getElementById("image-clip-y1");
+  const x2Input = document.getElementById("image-clip-x2");
+  const y2Input = document.getElementById("image-clip-y2");
+  if (!stage || !selection || !x1Input || !y1Input || !x2Input || !y2Input) return;
+
+  const naturalWidth = Math.max(1, Number(stage.dataset.naturalWidth) || 1);
+  const naturalHeight = Math.max(1, Number(stage.dataset.naturalHeight) || 1);
+
+  function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+  }
+
+  function syncOverlayFromInputs() {
+    const x1 = clamp(Number(x1Input.value) || 0, 0, naturalWidth);
+    const y1 = clamp(Number(y1Input.value) || 0, 0, naturalHeight);
+    const x2 = clamp(Number(x2Input.value) || 0, 0, naturalWidth);
+    const y2 = clamp(Number(y2Input.value) || 0, 0, naturalHeight);
+    const left = Math.min(x1, x2);
+    const top = Math.min(y1, y2);
+    const width = Math.max(0, Math.abs(x2 - x1));
+    const height = Math.max(0, Math.abs(y2 - y1));
+    selection.style.left = ((left / naturalWidth) * 100) + "%";
+    selection.style.top = ((top / naturalHeight) * 100) + "%";
+    selection.style.width = ((width / naturalWidth) * 100) + "%";
+    selection.style.height = ((height / naturalHeight) * 100) + "%";
+  }
+
+  function clientToImageCoords(clientX, clientY) {
+    const rect = stage.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return { x: 0, y: 0 };
+    const relX = clamp((clientX - rect.left) / rect.width, 0, 1);
+    const relY = clamp((clientY - rect.top) / rect.height, 0, 1);
+    return {
+      x: Math.round(relX * naturalWidth),
+      y: Math.round(relY * naturalHeight),
+    };
+  }
+
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  stage.addEventListener("pointerdown", function (event) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    dragging = true;
+    if (stage.setPointerCapture && event.pointerId !== undefined) {
+      try { stage.setPointerCapture(event.pointerId); } catch (_) {}
+    }
+    const pt = clientToImageCoords(event.clientX, event.clientY);
+    startX = pt.x;
+    startY = pt.y;
+    x1Input.value = String(startX);
+    y1Input.value = String(startY);
+    x2Input.value = String(Math.min(naturalWidth, startX + 1));
+    y2Input.value = String(Math.min(naturalHeight, startY + 1));
+    syncOverlayFromInputs();
+  });
+
+  stage.addEventListener("pointermove", function (event) {
+    if (!dragging) return;
+    const pt = clientToImageCoords(event.clientX, event.clientY);
+    const left = Math.min(startX, pt.x);
+    const top = Math.min(startY, pt.y);
+    const right = Math.max(left + 1, Math.max(startX, pt.x));
+    const bottom = Math.max(top + 1, Math.max(startY, pt.y));
+    x1Input.value = String(left);
+    y1Input.value = String(top);
+    x2Input.value = String(Math.min(naturalWidth, right));
+    y2Input.value = String(Math.min(naturalHeight, bottom));
+    syncOverlayFromInputs();
+  });
+
+  function stopDrag() {
+    dragging = false;
+  }
+
+  stage.addEventListener("pointerup", stopDrag);
+  stage.addEventListener("pointercancel", stopDrag);
+
+  for (const input of [x1Input, y1Input, x2Input, y2Input]) {
+    input.addEventListener("input", syncOverlayFromInputs);
+    input.addEventListener("change", syncOverlayFromInputs);
+  }
+  syncOverlayFromInputs();
+})();
+</script>

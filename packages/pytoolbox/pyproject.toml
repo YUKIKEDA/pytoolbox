@@ -3,7 +3,7 @@ name = "pytoolbox"
 version = "0.0.0"
 description = "Core library for the pytoolbox CLI."
 requires-python = ">=3.12"
-dependencies = ["pillow>=10.1"]
+dependencies = ["pillow>=10.1", "pypdf>=5"]
 
 [project.scripts]
 pytoolbox = "pytoolbox.cli:run"
