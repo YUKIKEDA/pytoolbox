@@ -80,6 +80,13 @@ HARDCODING = Tool(
     "Find hard-coded strings, numbers, IPs, URLs, and email addresses in a folder's sources.",
 )
 
+PDF_SPLIT = Tool(
+    "pdf-split",
+    System.OPERATIONS,
+    "Files",
+    "Split a PDF file into one PDF file per page.",
+)
+
 FOLDER_SIZE = Tool(
     "folder-size",
     System.OPERATIONS,
@@ -123,6 +130,7 @@ TOOLS: tuple[Tool, ...] = (
     TEXT_COUNT,
     RESX_COMPARE,
     HARDCODING,
+    PDF_SPLIT,
     FOLDER_SIZE,
     CACHE_CLEAN,
     PORT,

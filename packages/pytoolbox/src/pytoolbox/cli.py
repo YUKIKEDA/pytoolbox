@@ -42,6 +42,10 @@ from pytoolbox.tools.system.folder_size import (
 )
 from pytoolbox.tools.system.network import DEFAULT_TIMEOUT as NETWORK_DEFAULT_TIMEOUT
 from pytoolbox.tools.system.network import PingResult, PortResult
+from pytoolbox.tools.system.pdf_split import (
+    DEFAULT_FORMAT as PDF_SPLIT_DEFAULT_FORMAT,
+)
+from pytoolbox.tools.system.pdf_split import PdfSplitResult, split_pdf
 from pytoolbox.tools.system.udp import DEFAULT_PORT as UDP_DEFAULT_PORT
 from pytoolbox.tools.system.udp import HOST as UDP_HOST
 from pytoolbox.tools.system.udp import listen_udp
@@ -465,6 +469,56 @@ def _mock_image(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_pdf_split(result: PdfSplitResult) -> str:
+    """Render a pdf-split result as `pytoolbox pdf-split` prints it.
+
+    Args:
+        result: The pdf-split outcome.
+
+    Returns:
+        One line per planned or written page file, a blank line when non-empty,
+        and the summary.
+    """
+    lines = [str(path) for path in result.items]
+    if lines:
+        lines.append("")
+    if result.dry_run:
+        summary = f"dry-run: {result.batch.succeeded} pages planned"
+    else:
+        summary = f"wrote: {result.batch.succeeded} pages"
+    if result.batch.failures:
+        summary += f", {len(result.batch.failures)} failed"
+    if result.batch.cancelled:
+        summary += ", cancelled"
+    lines.append(summary)
+    return "\n".join(lines)
+
+
+def _pdf_split(args: argparse.Namespace) -> int:
+    progress = sys.stderr.isatty()
+    for value in split_pdf(
+        Path(args.input),
+        Path(args.output_dir),
+        fmt=args.format,
+        overwrite=args.overwrite,
+        dry_run=args.dry_run,
+    ):
+        if isinstance(value, PdfSplitResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            print(format_pdf_split(value))
+            for failure in value.batch.failures:
+                print(f"failed: {failure.path}: {failure.message}", file=sys.stderr)
+        elif progress:
+            print(
+                f"\rpdf-split {value.completed}/{value.total}",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+    return 0
+
+
 def _gui(_args: argparse.Namespace) -> int:
     try:
         from pytoolbox_gui.cli import serve  # noqa: PLC0415 - the core runs without the GUI installed
@@ -636,6 +690,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--dry-run", action="store_true", help="Report planned paths without writing."
     )
     mock_image.set_defaults(handler=_mock_image)
+    pdf_split = commands.add_parser(registry.PDF_SPLIT.name, help=registry.PDF_SPLIT.summary)
+    pdf_split.add_argument("input", help="Source PDF file path.")
+    pdf_split.add_argument("output_dir", help="Destination directory for split pages.")
+    pdf_split.add_argument(
+        "--format",
+        default=PDF_SPLIT_DEFAULT_FORMAT,
+        metavar="FMT",
+        help=f"Name format ({{n}}, {{stem}}, {{name}}). Default: {PDF_SPLIT_DEFAULT_FORMAT}.",
+    )
+    pdf_split.add_argument("--overwrite", action="store_true", help="Replace existing files.")
+    pdf_split.add_argument(
+        "--dry-run", action="store_true", help="Report planned paths without writing."
+    )
+    pdf_split.set_defaults(handler=_pdf_split)
     registry.check_unique(registry.TOOLS)
     try:
         args = parser.parse_args(argv)

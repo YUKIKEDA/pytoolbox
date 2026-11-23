@@ -1,0 +1,27 @@
+<header class="tool-header">
+  <h1>{{ tool.name }}</h1>
+  <p>{{ tool.summary }}</p>
+</header>
+<form class="split" hx-post="/tools/pdf-split/runs" hx-target="#pdf-split-run">
+  <section class="split-side">
+    <h2><label for="pdf-split-source">Source PDF</label></h2>
+    <input id="pdf-split-source" class="path-field" name="source" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\document.pdf" autofocus>
+    <h2><label for="pdf-split-dir">Output folder</label></h2>
+    <input id="pdf-split-dir" class="path-field" name="output_dir" spellcheck="false"
+           autocomplete="off" placeholder="C:\path\to\pages">
+    <h2><label for="pdf-split-format">Filename format</label></h2>
+    <input id="pdf-split-format" class="path-field" name="format" spellcheck="false"
+           autocomplete="off" value="{{ default_format }}">
+    <p class="quiet">Placeholders: <code>{n}</code> (1-based page number), <code>{stem}</code>, <code>{name}</code>.</p>
+    <fieldset class="check-row">
+      <legend class="visually-hidden">Options</legend>
+      <label><input type="checkbox" name="dry_run"> Dry-run</label>
+      <label><input type="checkbox" name="overwrite"> Overwrite existing files</label>
+    </fieldset>
+    <div><button type="submit">Start</button></div>
+  </section>
+  <section id="pdf-split-run" class="split-side tool-result" aria-live="polite">
+    <p class="quiet">Choose a PDF and destination folder, then press Start.</p>
+  </section>
+</form>

@@ -1,0 +1,39 @@
+{% set failed_count = result.batch.failures | length %}
+<p>
+  {% if result.dry_run %}
+  Dry-run in <code>{{ result.output_dir }}</code>: {{ result.batch.succeeded }} pages planned{% if failed_count %}, {{ failed_count }} failed{% endif %}{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% else %}
+  Split <code>{{ result.source.name }}</code> into <code>{{ result.output_dir }}</code>: {{ result.batch.succeeded }} pages written, {{ failed_count }} failed{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% endif %}
+</p>
+<dl class="counts pdf-split-counts">
+  <div><dt>Mode</dt><dd>{% if result.dry_run %}Dry-run{% else %}Written{% endif %}</dd></div>
+  <div><dt>Pages</dt><dd>{{ result.batch.succeeded }}</dd></div>
+  <div><dt>Failed</dt><dd>{{ failed_count }}</dd></div>
+</dl>
+{% if rows %}
+{% if result.items | length > rows | length %}
+<p class="quiet">Showing {{ rows | length }} of {{ result.items | length }} pages. Use <code>pytoolbox pdf-split</code> for all.</p>
+{% endif %}
+<table class="result-table pdf-split-table">
+  <thead>
+    <tr><th scope="col">Page</th><th scope="col">Path</th></tr>
+  </thead>
+  <tbody>
+    {% for page_num, path in rows %}
+    <tr>
+      <td>{{ page_num }}</td>
+      <td><code>{{ path }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% if result.batch.failures %}
+<h2>Failed ({{ failed_count }})</h2>
+<ul class="failures">
+  {% for failure in result.batch.failures %}
+  <li><code>{{ failure.path }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

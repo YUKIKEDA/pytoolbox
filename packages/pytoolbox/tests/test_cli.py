@@ -10,6 +10,7 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
+from pypdf import PdfWriter
 
 import pytoolbox_gui.cli
 from pytoolbox import cli, registry
@@ -25,6 +26,7 @@ from pytoolbox.tools.system import network, udp
 from pytoolbox.tools.system.cleanup import CacheCleanResult, CacheItem
 from pytoolbox.tools.system.folder_size import FolderSizeResult
 from pytoolbox.tools.system.network import PingResult, PortResult
+from pytoolbox.tools.system.pdf_split import PdfSplitResult
 
 TOOLS = (
     Tool("text-count", System.DEVELOPER, "Text", "Count characters."),
@@ -139,6 +141,8 @@ def test_the_real_registry_lists_regex_and_text_count_under_text(
     ]
     assert lines[11:] == [
         "System Operations",
+        "  Files",
+        f"    pdf-split  {registry.PDF_SPLIT.summary}",
         "  Storage",
         f"    folder-size  {registry.FOLDER_SIZE.summary}",
         "  Cleanup",
@@ -888,3 +892,62 @@ def test_mock_image_dry_run_write_progress_and_errors(
         == 0
     )
     assert capsys.readouterr().err == "failed: bad.png: access is denied\n"
+
+
+def test_pdf_split_dry_run_split_overwrite_progress_and_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("LOCALAPPDATA", str(state))
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    src = tmp_path / "doc.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    writer.add_blank_page(width=120, height=100)
+    with src.open("wb") as handle:
+        writer.write(handle)
+    out_dir = tmp_path / "pages"
+
+    assert cli.main(["pdf-split", str(src), str(out_dir), "--dry-run"]) == 0
+    dry_out = capsys.readouterr().out
+    assert str(out_dir.resolve() / "page_1.pdf") in dry_out
+    assert "dry-run: 2 pages planned" in dry_out
+    assert not out_dir.exists()
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    assert cli.main(["pdf-split", str(src), str(out_dir), "--format", "{stem}_{n}.pdf"]) == 0
+    captured = capsys.readouterr()
+    assert "wrote: 2 pages" in captured.out
+    assert "\rpdf-split 1/2" in captured.err
+    assert captured.err.endswith("\r\033[K")
+    assert (out_dir / "doc_1.pdf").is_file()
+    assert (out_dir / "doc_2.pdf").is_file()
+
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: False)
+    assert cli.main(["pdf-split", str(src), str(out_dir), "--format", "{stem}_{n}.pdf"]) == 1
+    assert "already exists" in capsys.readouterr().err
+
+    assert (
+        cli.main(["pdf-split", str(src), str(out_dir), "--format", "{stem}_{n}.pdf", "--overwrite"])
+        == 0
+    )
+    assert "wrote: 2 pages" in capsys.readouterr().out
+
+    partial = PdfSplitResult(
+        source=src.resolve(),
+        output_dir=out_dir.resolve(),
+        items=(out_dir / "page_1.pdf",),
+        dry_run=False,
+        batch=BatchResult(
+            1, (ItemFailure(Path("page_2.pdf"), "access is denied"),), cancelled=True
+        ),
+    )
+    formatted = cli.format_pdf_split(partial)
+    assert "wrote: 1 pages, 1 failed, cancelled" in formatted
+
+    def fake_split(*_args: object, **_kwargs: object) -> Iterator[PdfSplitResult]:
+        yield partial
+
+    monkeypatch.setattr(cli, "split_pdf", fake_split)
+    assert cli.main(["pdf-split", str(src), str(out_dir)]) == 0
+    assert capsys.readouterr().err == "failed: page_2.pdf: access is denied\n"

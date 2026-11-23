@@ -17,6 +17,7 @@ from pytoolbox.registry import (
     HARDCODING,
     JSON_GEN,
     MOCK_IMAGE,
+    PDF_SPLIT,
     PING,
     PORT,
     REGEX,
@@ -62,6 +63,8 @@ from pytoolbox.tools.system.folder_size import (
     to_csv,
 )
 from pytoolbox.tools.system.network import DEFAULT_TIMEOUT as NETWORK_DEFAULT_TIMEOUT
+from pytoolbox.tools.system.pdf_split import DEFAULT_FORMAT as PDF_SPLIT_DEFAULT_FORMAT
+from pytoolbox.tools.system.pdf_split import PdfSplitResult, split_pdf
 from pytoolbox.tools.system.udp import DEFAULT_PORT as UDP_DEFAULT_PORT
 from pytoolbox.tools.system.udp import HOST as UDP_HOST
 from pytoolbox.tools.system.udp import UdpResult, listen_udp
@@ -712,6 +715,50 @@ def stream_mock_image(form: Form, *, state_root: Path | None = None) -> Stream:
     return stream
 
 
+def pdf_split_report(result: PdfSplitResult) -> Report:
+    """Build the pdf-split result fragment with the first planned or written pages."""
+    rows = list(enumerate(result.items[:SHOWN_ITEMS], start=1))
+    return Report("tools/pdf-split-result.html", {"result": result, "rows": rows})
+
+
+def stream_pdf_split(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start PDF splitting from the `pdf-split` form.
+
+    Paths and output format are validated before the run starts.
+
+    Raises:
+        InputError: A path is missing, relative, invalid, or targets exist without overwrite.
+    """
+    source = path_field(form, "source", "Source PDF")
+    if source is None:
+        msg = "Source PDF: enter a path."
+        raise InputError(msg)
+    output_dir = path_field(form, "output_dir", "Output folder")
+    if output_dir is None:
+        msg = "Output folder: enter a path."
+        raise InputError(msg)
+    fmt = text_field(form, "format") if "format" in form else PDF_SPLIT_DEFAULT_FORMAT
+
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = split_pdf(
+        source,
+        output_dir,
+        fmt=fmt,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield pdf_split_report(value) if isinstance(value, PdfSplitResult) else value
+
+    return stream
+
+
 SCREENS: tuple[Screen, ...] = (
     Screen(
         CSV_GEN,
@@ -753,6 +800,13 @@ SCREENS: tuple[Screen, ...] = (
         },
     ),
     Screen(FOLDER_SIZE, "tools/folder-size.html", "storage", stream=stream_folder_size),
+    Screen(
+        PDF_SPLIT,
+        "tools/pdf-split.html",
+        "document_split_hint",
+        stream=stream_pdf_split,
+        context={"default_format": PDF_SPLIT_DEFAULT_FORMAT},
+    ),
     Screen(
         CACHE_CLEAN,
         "tools/cache-clean.html",
