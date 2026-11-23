@@ -1,0 +1,41 @@
+{% set failed_count = result.batch.failures | length %}
+<p>
+  {% if result.dry_run %}
+  Dry-run: {{ result.batch.succeeded }} files planned{% if failed_count %}, {{ failed_count }} failed{% endif %}{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% else %}
+  Copied: {{ result.batch.succeeded }} files written, {{ failed_count }} failed{% if result.batch.cancelled %}, <strong>cancelled</strong>{% endif %}.
+  {% endif %}
+</p>
+<dl class="counts file-copy-counts">
+  <div><dt>Mode</dt><dd>{% if result.dry_run %}Dry-run{% else %}Copied{% endif %}</dd></div>
+  <div><dt>Succeeded</dt><dd>{{ result.batch.succeeded }}</dd></div>
+  <div><dt>Failed</dt><dd>{{ failed_count }}</dd></div>
+</dl>
+{% if rows %}
+{% if result.items | length > rows | length %}
+<p class="quiet">Showing {{ rows | length }} of {{ result.items | length }} paths. Use <code>pytoolbox file-copy</code> for all.</p>
+{% endif %}
+<table class="result-table file-copy-table">
+  <thead>
+    <tr><th scope="col">#</th><th scope="col">Destination path</th></tr>
+  </thead>
+  <tbody>
+    {% for path in rows %}
+    <tr>
+      <td class="file-copy-index">{{ loop.index }}</td>
+      <td><code>{{ path }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="quiet">No files {% if result.dry_run %}planned{% else %}copied{% endif %}.</p>
+{% endif %}
+{% if result.batch.failures %}
+<h2>Failed ({{ failed_count }})</h2>
+<ul class="failures">
+  {% for failure in result.batch.failures %}
+  <li><code>{{ failure.path }}</code>: {{ failure.message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

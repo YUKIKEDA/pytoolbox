@@ -33,6 +33,8 @@ from pytoolbox.tools.dev.resx import Entry, Status, compare_resx
 from pytoolbox.tools.dev.text import TextCount, count_text
 from pytoolbox.tools.system import network
 from pytoolbox.tools.system.cleanup import CACHE_TARGETS, CacheCleanResult, clean_caches
+from pytoolbox.tools.system.file_copy import DEFAULT_FORMAT as FILE_COPY_DEFAULT_FORMAT
+from pytoolbox.tools.system.file_copy import FileCopyResult, copy_file_batch
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -222,6 +224,63 @@ def _hardcoding(args: argparse.Namespace) -> int:
         elif isinstance(value, HardcodingResult):
             for failure in value.failures:
                 print(f"skipped: {failure.path.as_posix()}: {failure.message}", file=sys.stderr)
+    return 0
+
+
+def format_file_copy(result: FileCopyResult) -> str:
+    """Render a file-copy result as `pytoolbox file-copy` prints it.
+
+    Args:
+        result: The file-copy outcome.
+
+    Returns:
+        One line per planned or copied path, a blank line when non-empty, and the summary.
+    """
+    lines = [str(path) for path in result.items]
+    if lines:
+        lines.append("")
+    mode = "dry-run" if result.dry_run else "copied"
+    verb = "planned" if result.dry_run else "files"
+    summary = f"{mode}: {result.batch.succeeded} {verb}"
+    if result.batch.failures:
+        summary += f", {len(result.batch.failures)} failed"
+    if result.batch.cancelled:
+        summary += ", cancelled"
+    lines.append(summary)
+    return "\n".join(lines)
+
+
+def _file_copy(args: argparse.Namespace) -> int:
+    if not str(args.source).strip():
+        msg = "Source path must not be empty."
+        raise InputError(msg)
+    if not str(args.dest_dir).strip():
+        msg = "Destination folder must not be empty."
+        raise InputError(msg)
+    progress = sys.stderr.isatty()
+    stream = copy_file_batch(
+        Path(args.source),
+        Path(args.dest_dir),
+        args.count,
+        fmt=args.format,
+        start=args.start,
+        overwrite=args.overwrite,
+        dry_run=args.dry_run,
+    )
+    for value in stream:
+        if isinstance(value, FileCopyResult):
+            if progress:
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            print(format_file_copy(value))
+            for failure in value.batch.failures:
+                print(f"failed: {failure.path}: {failure.message}", file=sys.stderr)
+        elif progress:
+            print(
+                f"\rfile-copy {value.completed}/{value.total}",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
     return 0
 
 
@@ -583,6 +642,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         help=f"Kinds to find, comma-separated: {','.join(KIND_NAMES)}. Default: all.",
     )
     hardcoding.set_defaults(handler=_hardcoding)
+    file_copy = commands.add_parser(registry.FILE_COPY.name, help=registry.FILE_COPY.summary)
+    file_copy.add_argument("source", metavar="SOURCE", help="Source file path.")
+    file_copy.add_argument("dest_dir", metavar="DEST_DIR", help="Destination folder path.")
+    file_copy.add_argument(
+        "--count", type=int, required=True, metavar="N", help="Number of copies."
+    )
+    file_copy.add_argument(
+        "--format",
+        default=FILE_COPY_DEFAULT_FORMAT,
+        metavar="FMT",
+        help=f"Output name template. Default: {FILE_COPY_DEFAULT_FORMAT}.",
+    )
+    file_copy.add_argument(
+        "--start",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Starting index for {n}. Default: 1.",
+    )
+    file_copy.add_argument("--overwrite", action="store_true", help="Replace existing files.")
+    file_copy.add_argument(
+        "--dry-run", action="store_true", help="Report planned paths without copying."
+    )
+    file_copy.set_defaults(handler=_file_copy)
     sizes = commands.add_parser(registry.FOLDER_SIZE.name, help=registry.FOLDER_SIZE.summary)
     sizes.add_argument("folder", nargs="?", default=".", help="The folder. Default: here.")
     sizes.add_argument("--top", type=int, metavar="N", help="Print only the largest N items.")
