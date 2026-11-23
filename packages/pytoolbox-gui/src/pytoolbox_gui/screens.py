@@ -14,11 +14,13 @@ from pytoolbox.registry import (
     CACHE_CLEAN,
     CSV_GEN,
     FILE_COPY,
+    FOLDER_COPY,
     FOLDER_SIZE,
     HARDCODING,
     IMAGE_CLIP,
     JSON_GEN,
     MOCK_IMAGE,
+    PDF_SPLIT,
     PING,
     PORT,
     REGEX,
@@ -58,6 +60,8 @@ from pytoolbox.tools.system import network
 from pytoolbox.tools.system.cleanup import CacheCleanResult, clean_caches
 from pytoolbox.tools.system.file_copy import DEFAULT_FORMAT as FILE_COPY_DEFAULT_FORMAT
 from pytoolbox.tools.system.file_copy import FileCopyResult, copy_file_batch
+from pytoolbox.tools.system.folder_copy import DEFAULT_FORMAT as FOLDER_COPY_DEFAULT_FORMAT
+from pytoolbox.tools.system.folder_copy import FolderCopyResult, copy_folder_batch
 from pytoolbox.tools.system.folder_size import (
     FolderSizeResult,
     SizeItem,
@@ -73,6 +77,8 @@ from pytoolbox.tools.system.image_clip import (
     parse_box,
 )
 from pytoolbox.tools.system.network import DEFAULT_TIMEOUT as NETWORK_DEFAULT_TIMEOUT
+from pytoolbox.tools.system.pdf_split import DEFAULT_FORMAT as PDF_SPLIT_DEFAULT_FORMAT
+from pytoolbox.tools.system.pdf_split import PdfSplitResult, split_pdf
 from pytoolbox.tools.system.udp import DEFAULT_PORT as UDP_DEFAULT_PORT
 from pytoolbox.tools.system.udp import HOST as UDP_HOST
 from pytoolbox.tools.system.udp import UdpResult, listen_udp
@@ -655,13 +661,19 @@ def run_json_gen(form: Form, *, state_root: Path | None = None) -> Fragment:
     return Fragment("tools/json-gen-result.html", {"result": result})
 
 
-def _int_field(form: Form, name: str, label: str) -> int:
+def _whole_number(form: Form, name: str, label: str, *, default: int | None = None) -> int:
+    if name not in form and default is not None:
+        return default
     text = text_field(form, name).strip()
     try:
         return int(text)
     except ValueError:
         msg = f"{label}: enter a whole number, not {text!r}."
         raise InputError(msg) from None
+
+
+def _int_field(form: Form, name: str, label: str) -> int:
+    return _whole_number(form, name, label)
 
 
 def file_copy_report(result: FileCopyResult) -> Report:
@@ -722,6 +734,64 @@ def stream_file_copy(form: Form, *, state_root: Path | None = None) -> Stream:
     return stream
 
 
+def folder_copy_report(result: FolderCopyResult) -> Report:
+    """Build the folder-copy result fragment with the first planned or copied paths."""
+    shown_items = result.items[:SHOWN_ITEMS]
+    return Report(
+        "tools/folder-copy-result.html",
+        {"result": result, "shown_items": shown_items},
+    )
+
+
+def stream_folder_copy(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start a batch folder copy from the `folder-copy` form.
+
+    Paths, format, numbering, and overwrite rules are validated before the run starts.
+
+    Args:
+        form: Submitted form fields (`source`, `dest_dir`, `format`, `start`, `count`,
+            `overwrite`, and `dry_run`).
+        state_root: State directory override. Defaults to the request-bound state root.
+
+    Returns:
+        The SSE stream yielding `Progress` and the final `Report`.
+
+    Raises:
+        InputError: Any field is missing, relative, or invalid, or a target already exists.
+    """
+    source = path_field(form, "source", "Source folder")
+    if source is None:
+        msg = "Source folder: enter a path."
+        raise InputError(msg)
+    dest_dir = path_field(form, "dest_dir", "Destination folder")
+    if dest_dir is None:
+        msg = "Destination folder: enter a path."
+        raise InputError(msg)
+    fmt = text_field(form, "format") if "format" in form else FOLDER_COPY_DEFAULT_FORMAT
+    start = _whole_number(form, "start", "Start number", default=1)
+    count = _whole_number(form, "count", "Count")
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = copy_folder_batch(
+        source,
+        dest_dir,
+        count,
+        fmt=fmt,
+        start=start,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield folder_copy_report(value) if isinstance(value, FolderCopyResult) else value
+
+    return stream
+
+
 def mock_image_report(result: MockImageResult) -> Report:
     """Build the mock-image result fragment with dimensions, sizes, and paths."""
     rows = [(item, human_size(item.bytes)) for item in result.items[:SHOWN_ITEMS]]
@@ -777,6 +847,50 @@ def stream_mock_image(form: Form, *, state_root: Path | None = None) -> Stream:
         stops.append(cancel)
         for value in values:
             yield mock_image_report(value) if isinstance(value, MockImageResult) else value
+
+    return stream
+
+
+def pdf_split_report(result: PdfSplitResult) -> Report:
+    """Build the pdf-split result fragment with the first planned or written pages."""
+    rows = list(enumerate(result.items[:SHOWN_ITEMS], start=1))
+    return Report("tools/pdf-split-result.html", {"result": result, "rows": rows})
+
+
+def stream_pdf_split(form: Form, *, state_root: Path | None = None) -> Stream:
+    """Start PDF splitting from the `pdf-split` form.
+
+    Paths and output format are validated before the run starts.
+
+    Raises:
+        InputError: A path is missing, relative, invalid, or targets exist without overwrite.
+    """
+    source = path_field(form, "source", "Source PDF")
+    if source is None:
+        msg = "Source PDF: enter a path."
+        raise InputError(msg)
+    output_dir = path_field(form, "output_dir", "Output folder")
+    if output_dir is None:
+        msg = "Output folder: enter a path."
+        raise InputError(msg)
+    fmt = text_field(form, "format") if "format" in form else PDF_SPLIT_DEFAULT_FORMAT
+
+    active_state = _state_root.get() if state_root is None else state_root
+    stops: list[Cancel] = []
+    values = split_pdf(
+        source,
+        output_dir,
+        fmt=fmt,
+        overwrite=checkbox(form, "overwrite"),
+        dry_run=checkbox(form, "dry_run"),
+        state_root=active_state,
+        cancel=lambda: any(stop() for stop in stops),
+    )
+
+    def stream(cancel: Cancel) -> Iterator[Value]:
+        stops.append(cancel)
+        for value in values:
+            yield pdf_split_report(value) if isinstance(value, PdfSplitResult) else value
 
     return stream
 
@@ -909,6 +1023,24 @@ SCREENS: tuple[Screen, ...] = (
             "default_start": 1,
             "default_count": 3,
         },
+    ),
+    Screen(
+        FOLDER_COPY,
+        "tools/folder-copy.html",
+        "folder_add",
+        stream=stream_folder_copy,
+        context={
+            "default_format": FOLDER_COPY_DEFAULT_FORMAT,
+            "default_start": 1,
+            "default_count": 3,
+        },
+    ),
+    Screen(
+        PDF_SPLIT,
+        "tools/pdf-split.html",
+        "document_split_hint",
+        stream=stream_pdf_split,
+        context={"default_format": PDF_SPLIT_DEFAULT_FORMAT},
     ),
     Screen(
         IMAGE_CLIP,

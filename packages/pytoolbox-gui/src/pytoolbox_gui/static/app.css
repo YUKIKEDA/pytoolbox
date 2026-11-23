@@ -959,6 +959,35 @@ button {
   overflow-wrap: anywhere;
 }
 
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 2);
+
+  & > div {
+    display: grid;
+    gap: var(--space);
+  }
+}
+
+.folder-copy-counts {
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+
+  & div {
+    gap: var(--space);
+  }
+}
+
+.folder-copy-table {
+  & th:nth-child(1) {
+    width: 3.5rem;
+  }
+
+  & td:nth-child(1) {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 .mock-image-dims {
   display: flex;
   flex-wrap: wrap;
@@ -1060,5 +1089,23 @@ button {
 
   & th:nth-child(2) {
     width: 28%;
+  }
+}
+
+.pdf-split-counts {
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+
+  & div {
+    gap: var(--space);
+  }
+}
+
+.pdf-split-table {
+  & th:nth-child(1) {
+    width: 4rem;
+  }
+
+  & td:nth-child(1) {
+    font-variant-numeric: tabular-nums;
   }
 }

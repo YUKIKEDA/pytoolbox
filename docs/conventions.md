@@ -18,7 +18,7 @@ packages/pytoolbox/     core library and CLI
   src/pytoolbox/state.py     state_dir: per-user directory for locks and run history
   src/pytoolbox/worker.py    Worker: a process for a call that may never return
   src/pytoolbox/tools/dev/   Developer Utilities (csv_gen.py, hardcoding.py, json_gen.py, mock_image.py, regex.py, resx.py, text.py)
-  src/pytoolbox/tools/system/  System Operations (cleanup.py, file_copy.py, folder_size.py, image_clip.py, network.py, udp.py)
+  src/pytoolbox/tools/system/  System Operations (cleanup.py, file_copy.py, folder_copy.py, folder_size.py, image_clip.py, network.py, pdf_split.py, udp.py)
 packages/pytoolbox-gui/ local web GUI, started by `pytoolbox gui`
   src/pytoolbox_gui/cli.py      serve(): port check, uvicorn, browser
   src/pytoolbox_gui/server.py   create_app(): routes, Host and Origin guard, errors
